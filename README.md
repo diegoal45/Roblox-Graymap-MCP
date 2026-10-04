@@ -98,7 +98,12 @@ Mediante `get_workspace_layout()`, OpenCode puede inspeccionar las partes y mode
 | `generate_district` | `name`, `center`, `size`, `style`, `density`, `street_width`, `has_furniture`, `align_to_terrain` | **Generador Urbano Macro AAA:** Crea distritos completos con asfalto, bordillos de granito, pasos de cebra, parcelas densas (sin huecos vacíos), rascacielos/edificios 3D con toldos, farolas y árboles. |
 | `build_detailed_structure` | `name`, `position`, `footprint`, `floors`, `style`, `seed`, `has_roof_props` | **Edificio Arquitectónico AAA:** Edificio multinivel con zócalo plinto, escaparates comerciales, toldos 45°, ventanas 3D con alféizar e iluminación interior realista, y azotea habitable con HVAC, tanque y antenas. |
 | `setup_environment` | `preset`, `clock_time`, `enable_future_lighting`, `shadow_softness` | **Atmósfera Cinemática:** Configura iluminación Future, sombras suaves y post-procesado (Atmosphere volumétrica, Bloom, ColorCorrection, SunRays). |
-| `populate_street_furniture` | `center`, `length`, `orientation`, `sidewalk_offset`, `interval`, `trees`, `lamps` | **Dressing de Aceras:** Puebla aceras con farolas con luz y sombra real, árboles en alcorques de fundición, bancos, papeleras y bocas de incendio. |
+| `generate_favela` | `name`, `center`, `size`, `slope_direction`, `elevation_gain`, `seed`, `has_footbridges` | **Urbanismo Orgánico de Favela:** Genera comunidades en ladera con terrazas escalonadas, callejones estrechos (vielas), escaleras transitables, casas apiladas con voladizos, caixas d'água azules, pasarelas entre azoteas y maraña de cables. |
+| `create_playable_interior` | `name`, `center`, `size`, `floors`, `theme`, `has_stairs`, `interactive_doors` | **Interiores Jugables y Conexión Vertical:** Equipa edificios con hueco de escalera continuo para caminar hasta la azotea sin saltar, pasillo central, habitaciones temáticas amuebladas y puertas interactivas ('E'). |
+| `create_curved_road` | `name`, `waypoints`, `road_width`, `has_sidewalks`, `has_lamps` | **Carreteras Curvas Bézier:** Trazado vial suave y orgánico siguiendo desniveles o curvas con asfalto, aceras y farolas. |
+| `create_intersection` | `name`, `center`, `type`, `radius`, `has_traffic_lights` | **Nodos Urbanos e Intersecciones:** Rotondas circulares con jardín central o cruces de 4 vías / cruces en T con semáforos funcionales y pasos de cebra. |
+| `scatter_foliage_and_clutter` | `name`, `center`, `radius`, `biome`, `count`, `seed` | **Scatter Masivo de Vegetación y Atrezzo:** Dispersa bosques de pinos, robles, rocas, matorrales o clutter urbano (palets, contenedores, bidones) con Raycast y filtro de pendientes. |
+| `inject_game_mechanics` | `enable_door_controller`, `enable_day_night_lighting`, `team_spawns` | **Mecánicas e Interactividad:** Inyecta controladores en ServerScriptService para puertas animadas con TweenService, alumbrado día/noche automático y spawns tácticos. |
 | `execute_raw_luau` | `code`, `actionName` | Ejecuta Luau arbitrario con soporte completo de Undo/Redo (`Ctrl + Z`). |
 
 ---
@@ -152,6 +157,28 @@ Cada estilo define materiales físicos nativos de Roblox (`Concrete`, `Brick`, `
 
 ### 4. Iluminación y Post-Procesado Cinemático (`setup_environment`)
 Inyecta `Technology = Future`, `Atmosphere` volumétrica, `BloomEffect`, `ColorCorrectionEffect` y `SunRaysEffect` con presets cinematográficos (`cyberpunk_night`, `golden_hour`, `overcast_fog`, `sunny_noon`, `rainy_noir`).
+
+### 5. Urbanismo Orgánico de Favelas en Ladera (`generate_favela`)
+Diseñado para la geografía montañosa (ej: Zona 1, Y = 20 a 160):
+* **Terrazas y Desniveles:** Las viviendas escalan la ladera montañosa sobre plataformas de hormigón escalonadas.
+* **Vielas y Callejones Peatonales:** Pasillos estrechos de 4 a 6 studs entre casas apiladas con voladizos asimétricos hacia el callejón.
+* **Escaleras de Conexión:** Tramos peatonales de peldaños calibrados ($\le 0.8\text{ studs}$) que conectan cada terraza.
+* **Detalles Auténticos:** Caixas d'água azules cilíndricas en azoteas, techos de chapa ondulada (`CorrugatedMetal`), pasarelas de tablas entre techos (`Footbridges`), varillas de armadura vistas (`Rebar`) y postes de madera con cables eléctricos aéreos.
+
+### 6. Interiores Transitables y Conexión Vertical (`create_playable_interior`)
+* **Hueco de Escalera Continuo (Stairwells):** Corta el forjado de cada piso para permitir que el avatar suba desde la calle hasta la azotea sin tener que saltar.
+* **Distribución de Salas:** Pasillos centrales con tabiques divisorios para oficinas, dormitorios, tiendas o bancos.
+* **Puertas Interactivas:** Hojas de madera con bisagra animada suavemente con `TweenService` al pulsar la tecla **E** (`ProximityPrompt`).
+* **Mobiliario Temático:** Escritorios con monitores, sofás, mostradores acorazados de banco con cristal blindado y cajas fuertes.
+
+### 7. Redes Viales Curvas e Intersecciones (`create_curved_road`, `create_intersection`)
+* **Carreteras Curvas Bézier:** Trazado vial suave y peraltado adaptado a laderas y curvas de montaña.
+* **Rotondas y Cruces:** Glorietas circulares con jardineras centrales monumentales y 4 salidas, o cruces de 4 vías con semáforos de 3 luces (rojo, ámbar, verde) y pasos de cebra.
+
+### 8. Scatter Masivo de Vegetación y Mecánicas de Juego (`scatter_foliage_and_clutter`, `inject_game_mechanics`)
+* **Scatter Orgánico con Raycast:** Siembra cientos de pinos, robles y rocas en la montaña, filtrando pendientes verticales para que los árboles nunca floten.
+* **Controlador Día/Noche:** Script en `ServerScriptService` que enciende farolas y ventanas de noche (`ClockTime >= 18`) y las apaga de día automáticamente.
+* **Spawns de Equipo:** Puntos de reaparición tácticos con halos luminosos y campos de fuerza para bandos rivales.
 
 ---
 

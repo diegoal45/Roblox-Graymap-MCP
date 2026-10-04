@@ -34,6 +34,11 @@ import { generateDetailedBuildingLuau } from "./generators/detailedBuilding.js";
 import { generateDistrictLuau } from "./generators/district.js";
 import { generateStreetFurnitureLuau } from "./generators/streetFurniture.js";
 import { generateEnvironmentLuau } from "./generators/environment.js";
+import { generateFavelaDistrictLuau } from "./generators/favela.js";
+import { generatePlayableInteriorLuau } from "./generators/interior.js";
+import { generateCurvedRoadLuau, generateIntersectionLuau } from "./generators/roadNetwork.js";
+import { generateFoliageScatterLuau } from "./generators/scatter.js";
+import { generateInteractiveSystemsLuau } from "./generators/interactive.js";
 import { logEvent } from "./utils/logger.js";
 
 // Iniciar servidor local HTTP que conecta con Roblox Studio
@@ -910,6 +915,182 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
+        name: "generate_favela",
+        description:
+          "GENERADOR ORGÁNICO DE FAVELA / COMUNIDAD DE LADERA: Construye una favela densa y realista sobre la ladera de la montaña con terrazas escalonadas, callejones peatonales estrechos (vielas), escaleras transitables entre niveles, casas apiladas con voladizos de ladrillo y revoques de colores, caixas d'água azules, pasarelas aéreas de tablas entre azoteas, y postes con maraña de cables eléctricos.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            name: { type: "string", default: "Favela_Hillside" },
+            center: {
+              type: "array",
+              items: { type: "number" },
+              default: [0, 50, -800],
+              description: "[X, Y, Z] posición base de la favela en la ladera",
+            },
+            size: {
+              type: "array",
+              items: { type: "number" },
+              default: [180, 180],
+              description: "[ancho X, profundidad Z] área de la comunidad",
+            },
+            slope_direction: {
+              type: "string",
+              enum: ["-Z", "+Z", "+X", "-X"],
+              default: "-Z",
+              description: "Dirección en la que asciende la montaña ('-Z' = hacia el Norte)",
+            },
+            elevation_gain: {
+              type: "number",
+              default: 70,
+              description: "Desnivel vertical que escala la favela en studs",
+            },
+            seed: { type: "number", default: 7771 },
+            has_overhead_cables: { type: "boolean", default: true, description: "Postes con maraña de cables aéreos" },
+            has_footbridges: { type: "boolean", default: true, description: "Pasarelas de tablas entre azoteas" },
+            parent: { type: "string", default: "City/Favela" },
+          },
+        },
+      },
+      {
+        name: "create_playable_interior",
+        description:
+          "GENERADOR DE INTERIORES JUGABLES Y TRANSITABLES: Equipa edificios con cajas de escaleras continuas (stairwells) con hueco en el forjado para caminar de planta baja a azotea sin saltar, pasillos centrales, tabiques de habitaciones, puertas interactivas animadas con ProximityPrompt ('E') y TweenService, e iluminación y mobiliario temático (oficina, residencial, tienda o banco).",
+        inputSchema: {
+          type: "object",
+          properties: {
+            name: { type: "string", default: "Playable_Interior" },
+            center: {
+              type: "array",
+              items: { type: "number" },
+              description: "[X, Y, Z] centro de la base del edificio",
+            },
+            size: {
+              type: "array",
+              items: { type: "number" },
+              default: [40, 10, 40],
+              description: "[ancho X, altura por piso, fondo Z] en studs",
+            },
+            floors: {
+              type: "number",
+              default: 3,
+              description: "Cantidad de pisos a amueblar y conectar con escaleras",
+            },
+            theme: {
+              type: "string",
+              enum: ["office", "residential", "store", "bank"],
+              default: "office",
+              description: "Temática y mobiliario interior",
+            },
+            has_stairs: { type: "boolean", default: true, description: "Caja de escaleras continua" },
+            interactive_doors: { type: "boolean", default: true, description: "Puertas interactivas con tecla E" },
+            parent: { type: "string", default: "City/Interiors" },
+          },
+          required: ["center"],
+        },
+      },
+      {
+        name: "create_curved_road",
+        description:
+          "TRAZADOR DE CARRETERAS CURVAS BÉZIER: Genera carreteras y autopistas que serpentean orgánicamente por montañas y llanuras mediante waypoints o curvas Bézier, con calzada de asfalto, líneas viales continuas o discontinuas, aceras elevadas y farolas con iluminación real.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            name: { type: "string", default: "Curved_Highway" },
+            waypoints: {
+              type: "array",
+              items: { type: "array", items: { type: "number" } },
+              description: "Lista de puntos [X, Y, Z] que definen la trayectoria curva",
+            },
+            road_width: { type: "number", default: 24, description: "Ancho de la calzada" },
+            sidewalk_width: { type: "number", default: 6 },
+            has_sidewalks: { type: "boolean", default: true },
+            has_lamps: { type: "boolean", default: true },
+            parent: { type: "string", default: "City/Roads" },
+          },
+          required: ["waypoints"],
+        },
+      },
+      {
+        name: "create_intersection",
+        description:
+          "GENERADOR DE INTERSECCIONES URBANAS (ROTONDAS Y CRUCES): Genera nodos de tráfico complejos como rotondas circulares con jardín central monumental o cruces de 4 vías y cruces en T con semáforos automáticos (luces roja, ámbar y verde) y pasos de peatones.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            name: { type: "string", default: "Intersection_Node" },
+            center: {
+              type: "array",
+              items: { type: "number" },
+              description: "[X, Y, Z] centro de la intersección",
+            },
+            type: {
+              type: "string",
+              enum: ["roundabout", "cross_4way", "t_junction"],
+              default: "roundabout",
+              description: "Tipo de intersección (rotonda circular, cruce de 4 vías o cruce en T)",
+            },
+            road_width: { type: "number", default: 24 },
+            radius: { type: "number", default: 32, description: "Radio exterior para rotondas" },
+            arm_length: { type: "number", default: 40, description: "Longitud de los accesos" },
+            has_traffic_lights: { type: "boolean", default: true },
+            parent: { type: "string", default: "City/Roads" },
+          },
+          required: ["center"],
+        },
+      },
+      {
+        name: "scatter_foliage_and_clutter",
+        description:
+          "MOTOR DE SCATTER MASIVO (VEGETACIÓN Y ATREZZO): Distribuye de forma orgánica cientos de árboles (pinos alpinos, robles frondosos), rocas escarpadas, arbustos o atrezzo urbano (contenedores de basura, palets, bidones) con detección de suelo mediante Raycast y filtro de pendiente para evitar acantilados verticales.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            name: { type: "string", default: "Nature_Scatter" },
+            center: {
+              type: "array",
+              items: { type: "number" },
+              description: "[X, Y, Z] centro de dispersión",
+            },
+            radius: { type: "number", default: 150, description: "Radio de dispersión en studs" },
+            biome: {
+              type: "string",
+              enum: ["forest", "mountain_rocks", "desert", "urban_clutter"],
+              default: "forest",
+            },
+            count: { type: "number", default: 60, description: "Cantidad de elementos a dispersar" },
+            seed: { type: "number", default: 8831 },
+            parent: { type: "string", default: "City/Nature" },
+          },
+          required: ["center"],
+        },
+      },
+      {
+        name: "inject_game_mechanics",
+        description:
+          "SISTEMAS E INTERACTIVIDAD DE JUEGO: Instala en ServerScriptService controladores para puertas interactivas animadas con TweenService al presionar 'E', alumbrado público automático día/noche según ClockTime, y puntos de Spawn tácticos de equipo con campos de fuerza.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            enable_door_controller: { type: "boolean", default: true },
+            enable_day_night_lighting: { type: "boolean", default: true },
+            enable_team_spawns: { type: "boolean", default: true },
+            team_a_position: {
+              type: "array",
+              items: { type: "number" },
+              default: [0, 5, 200],
+              description: "[X, Y, Z] posición base Equipo Azul",
+            },
+            team_b_position: {
+              type: "array",
+              items: { type: "number" },
+              default: [0, 80, -800],
+              description: "[X, Y, Z] posición base Equipo Rojo (Montaña)",
+            },
+          },
+        },
+      },
+      {
         name: "execute_raw_luau",
         description: "Ejecuta cualquier código Luau arbitrario con soporte Undo/Redo (Ctrl+Z).",
         inputSchema: {
@@ -1542,6 +1723,153 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           {
             type: "text",
             text: `🌳 Mobiliario urbano desplegado a lo largo de ${args.length ?? 120} studs en eje ${args.orientation || "Z"}:\n- Farolas con sombras y luz real\n- Árboles en alcorques de fundición\n- Bancos públicos, papeleras y bocas de incendio.`,
+          },
+        ],
+      };
+    }
+
+    if (name === "generate_favela") {
+      const luau = generateFavelaDistrictLuau({
+        name: args.name || "Favela_Hillside",
+        center: args.center || [0, 50, -800],
+        size: args.size || [180, 180],
+        slopeDirection: args.slope_direction || "-Z",
+        elevationGain: args.elevation_gain ?? 70,
+        seed: args.seed ?? 7771,
+        density: args.density || "high",
+        hasOverheadCables: args.has_overhead_cables ?? true,
+        hasFootbridges: args.has_footbridges ?? true,
+        parent: args.parent || "City/Favela",
+      });
+
+      await sendToRoblox(luau, `Generate Favela (${args.name || "Favela"})`, {}, 60000);
+      stats = { favela: args.name || "Favela_Hillside", size: args.size || [180, 180], elevGain: args.elevation_gain ?? 70 };
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `🏘️ Comunidad de Favela Orgánica '${args.name || "Favela_Hillside"}' generada con éxito:\n- Ubicación: ladera en [${(args.center || [0, 50, -800]).join(", ")}], desnivel ${args.elevation_gain ?? 70} studs subiendo en ${args.slope_direction || "-Z"}.\n- Terrazas escalonadas, casas apiladas con voladizos de ladrillo y revoques de colores.\n- Callejones peatonales estrechos y escaleras transitables conectando niveles.\n- Caixas d'água azules, pasarelas de madera entre azoteas y postes con maraña de cables eléctricos.`,
+          },
+        ],
+      };
+    }
+
+    if (name === "create_playable_interior") {
+      const luau = generatePlayableInteriorLuau({
+        name: args.name || "Playable_Interior",
+        center: args.center,
+        size: args.size || [40, 10, 40],
+        floors: args.floors ?? 3,
+        theme: args.theme || "office",
+        hasStairs: args.has_stairs ?? true,
+        interactiveDoors: args.interactive_doors ?? true,
+        parent: args.parent || "City/Interiors",
+      });
+
+      await sendToRoblox(luau, `Create Playable Interior (${args.theme || "office"})`, {}, 35000);
+      stats = { theme: args.theme || "office", floors: args.floors ?? 3 };
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `🚪 Interior jugable y transitable generado en [${args.position ? args.position.join(", ") : args.center.join(", ")}]:\n- Temática: ${args.theme || "office"} (${args.floors ?? 3} pisos transitables)\n- Caja de escaleras continua (stairwell) con huecos de forjado para subir sin saltar.\n- Pasillo central, tabiques de habitaciones y puertas interactivas animadas con ProximityPrompt ('E').\n- Iluminación de techo y mobiliario temático completo.`,
+          },
+        ],
+      };
+    }
+
+    if (name === "create_curved_road") {
+      const luau = generateCurvedRoadLuau({
+        name: args.name || "Curved_Highway",
+        waypoints: args.waypoints,
+        roadWidth: args.road_width ?? 24,
+        sidewalkWidth: args.sidewalk_width ?? 6,
+        hasSidewalks: args.has_sidewalks ?? true,
+        hasLamps: args.has_lamps ?? true,
+        parent: args.parent || "City/Roads",
+      });
+
+      await sendToRoblox(luau, `Create Curved Road (${args.name || "Highway"})`, {}, 30000);
+      stats = { waypointsCount: args.waypoints?.length || 0, roadWidth: args.road_width ?? 24 };
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `🛣️ Carretera curva Bézier '${args.name || "Curved_Highway"}' generada exitosamente:\n- Trazado suave a lo largo de ${args.waypoints?.length || 3} puntos con calzada de asfalto y líneas viales.\n- Aceras peatonales elevadas y farolas con iluminación real a lo largo de la curva.`,
+          },
+        ],
+      };
+    }
+
+    if (name === "create_intersection") {
+      const luau = generateIntersectionLuau({
+        name: args.name || "Intersection_Node",
+        center: args.center,
+        type: args.type || "roundabout",
+        roadWidth: args.road_width ?? 24,
+        radius: args.radius ?? 32,
+        armLength: args.arm_length ?? 40,
+        hasTrafficLights: args.has_traffic_lights ?? true,
+        parent: args.parent || "City/Roads",
+      });
+
+      await sendToRoblox(luau, `Create Intersection (${args.type || "roundabout"})`, {}, 25000);
+      stats = { type: args.type || "roundabout", center: args.center };
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `🚦 Nodo de intersección '${args.name || "Intersection_Node"}' (${args.type || "roundabout"}) generado en [${args.center.join(", ")}]:\n- ${args.type === "roundabout" ? "Rotonda circular con jardín/monumento central y 4 accesos." : "Cruce con 4 semáforos funcionales y señalización vial."}`,
+          },
+        ],
+      };
+    }
+
+    if (name === "scatter_foliage_and_clutter") {
+      const luau = generateFoliageScatterLuau({
+        name: args.name || "Nature_Scatter",
+        center: args.center,
+        radius: args.radius ?? 150,
+        biome: args.biome || "forest",
+        count: args.count ?? 60,
+        seed: args.seed ?? 8831,
+        parent: args.parent || "City/Nature",
+      });
+
+      await sendToRoblox(luau, `Scatter Foliage (${args.biome || "forest"})`, {}, 40000);
+      stats = { count: args.count ?? 60, biome: args.biome || "forest", radius: args.radius ?? 150 };
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `🌲 Scatter orgánico completado:\n- ${args.count ?? 60} elementos de bioma '${args.biome || "forest"}' dispersados en radio ${args.radius ?? 150} studs.\n- Detección de suelo por Raycast con filtro de pendientes para evitar acantilados verticales.`,
+          },
+        ],
+      };
+    }
+
+    if (name === "inject_game_mechanics") {
+      const luau = generateInteractiveSystemsLuau({
+        enableDoorController: args.enable_door_controller ?? true,
+        enableDayNightLighting: args.enable_day_night_lighting ?? true,
+        enableTeamSpawns: args.enable_team_spawns ?? true,
+        teamA_Position: args.team_a_position || [0, 5, 200],
+        teamB_Position: args.team_b_position || [0, 80, -800],
+      });
+
+      await sendToRoblox(luau, "Inject Game Mechanics Systems", {}, 20000);
+      stats = { mechanicsInjected: true };
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `🎮 Mecánicas e interactividad de juego instaladas en ServerScriptService:\n- InteractiveDoorController: Puertas animadas suaves con TweenService al presionar 'E'.\n- DayNightLightingController: Alumbrado público que se activa de noche y apaga de día automáticamente.\n- Spawns tácticos de equipo con campos de fuerza en Base Sur y Base Norte.`,
           },
         ],
       };
