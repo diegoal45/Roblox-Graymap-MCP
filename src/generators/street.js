@@ -61,8 +61,8 @@ local function buildStreet()
         p.CanCollide = canCol ~= nil and canCol or true
         p.CanTouch = false
         if isDecor then p.CanQuery = false end
-        p.TopSurface = Enum.TopSurfaceType.Smooth
-        p.BottomSurface = Enum.BottomSurfaceType.Smooth
+        p.TopSurface = Enum.SurfaceType.Smooth
+        p.BottomSurface = Enum.SurfaceType.Smooth
         p.Size = size
         p.CFrame = roadCF * relCF
         p.Color = color

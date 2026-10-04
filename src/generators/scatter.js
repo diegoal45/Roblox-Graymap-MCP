@@ -57,8 +57,8 @@ local function buildScatter()
         p.CanCollide = canCol ~= nil and canCol or false
         p.CanTouch = false
         p.CanQuery = false
-        p.TopSurface = Enum.TopSurfaceType.Smooth
-        p.BottomSurface = Enum.BottomSurfaceType.Smooth
+        p.TopSurface = Enum.SurfaceType.Smooth
+        p.BottomSurface = Enum.SurfaceType.Smooth
         p.Size = sz
         p.CFrame = cf
         p.Color = col
@@ -68,28 +68,56 @@ local function buildScatter()
 
     local function spawnPineTree(cf, scale)
         local s = scale or 1
-        local trunk = makePart("Pine_Trunk", Vector3.new(1.2 * s, 10 * s, 1.2 * s), cf * CFrame.new(0, 5 * s, 0), Color3.fromRGB(75, 45, 30), Enum.Material.WoodPlanks, true)
-        -- Conos superpuestos de hojas de pino
-        local c1 = makePart("Pine_Needles_1", Vector3.new(8 * s, 5 * s, 8 * s), cf * CFrame.new(0, 8 * s, 0), Color3.fromRGB(35, 85, 45), Enum.Material.Grass, false)
-        local c2 = makePart("Pine_Needles_2", Vector3.new(6 * s, 4.5 * s, 6 * s), cf * CFrame.new(0, 11 * s, 0), Color3.fromRGB(40, 95, 50), Enum.Material.Grass, false)
-        local c3 = makePart("Pine_Needles_3", Vector3.new(3.5 * s, 4 * s, 3.5 * s), cf * CFrame.new(0, 14 * s, 0), Color3.fromRGB(50, 110, 60), Enum.Material.Grass, false)
+        local trunk = makePart("Pine_Trunk", Vector3.new(1.2 * s, 10 * s, 1.2 * s), cf * CFrame.new(0, 4.5 * s, 0), Color3.fromRGB(75, 45, 30), Enum.Material.WoodPlanks, true)
+        
+        -- Capas cónicas esféricas de agujas de pino
+        local c1 = makePart("Pine_Needles_1", Vector3.new(7.6 * s, 4.2 * s, 7.6 * s), cf * CFrame.new(0, 7.5 * s, 0), Color3.fromRGB(35, 85, 45), Enum.Material.Grass, false)
+        c1.Shape = Enum.PartType.Ball
+
+        local c2 = makePart("Pine_Needles_2", Vector3.new(5.8 * s, 3.8 * s, 5.8 * s), cf * CFrame.new(0, 10.5 * s, 0), Color3.fromRGB(40, 95, 50), Enum.Material.Grass, false)
+        c2.Shape = Enum.PartType.Ball
+
+        local c3 = makePart("Pine_Needles_3", Vector3.new(4.0 * s, 3.5 * s, 4.0 * s), cf * CFrame.new(0, 13.2 * s, 0), Color3.fromRGB(50, 110, 60), Enum.Material.Grass, false)
+        c3.Shape = Enum.PartType.Ball
+
+        local peak = makePart("Pine_Peak", Vector3.new(2.2 * s, 2.8 * s, 2.2 * s), cf * CFrame.new(0, 15.2 * s, 0), Color3.fromRGB(55, 118, 65), Enum.Material.Grass, false)
+        peak.Shape = Enum.PartType.Ball
     end
 
     local function spawnOakTree(cf, scale)
         local s = scale or 1
-        local trunk = makePart("Oak_Trunk", Vector3.new(1.6 * s, 8 * s, 1.6 * s), cf * CFrame.new(0, 4 * s, 0), Color3.fromRGB(90, 60, 40), Enum.Material.WoodPlanks, true)
-        local crown = makePart("Oak_Crown", Vector3.new(8 * s, 7 * s, 8 * s), cf * CFrame.new(0, 9 * s, 0), Color3.fromRGB(60, 130, 55), Enum.Material.Grass, false)
+        local trunk = makePart("Oak_Trunk", Vector3.new(1.6 * s, 8 * s, 1.6 * s), cf * CFrame.new(0, 3.6 * s, 0), Color3.fromRGB(90, 60, 40), Enum.Material.WoodPlanks, true)
+        
+        -- Copa frondosa multicapa esférica
+        local cMain = makePart("Oak_Crown_Main", Vector3.new(8.5 * s, 7.5 * s, 8.5 * s), cf * CFrame.new(0, 9.5 * s, 0), Color3.fromRGB(55, 125, 50), Enum.Material.Grass, false)
+        cMain.Shape = Enum.PartType.Ball
+
+        local cSub1 = makePart("Oak_Crown_Sub1", Vector3.new(6.0 * s, 5.0 * s, 6.0 * s), cf * CFrame.new(2.0 * s, 10.5 * s, 1.2 * s), Color3.fromRGB(68, 142, 58), Enum.Material.Grass, false)
+        cSub1.Shape = Enum.PartType.Ball
+
+        local cSub2 = makePart("Oak_Crown_Sub2", Vector3.new(5.5 * s, 4.8 * s, 5.5 * s), cf * CFrame.new(-2.0 * s, 10.0 * s, -1.2 * s), Color3.fromRGB(48, 112, 45), Enum.Material.Grass, false)
+        cSub2.Shape = Enum.PartType.Ball
+
+        local cSub3 = makePart("Oak_Crown_Sub3", Vector3.new(5.0 * s, 4.4 * s, 5.0 * s), cf * CFrame.new(0.4 * s, 12.0 * s, -1.5 * s), Color3.fromRGB(62, 134, 54), Enum.Material.Grass, false)
+        cSub3.Shape = Enum.PartType.Ball
     end
 
     local function spawnRockCluster(cf, scale)
         local s = scale or 1
-        local rock1 = makePart("Rock_Main", Vector3.new(5 * s, 3.5 * s, 4.5 * s), cf * CFrame.new(0, 1.5 * s, 0) * CFrame.Angles(math.rad(15), math.rad(30), 0), Color3.fromRGB(115, 118, 122), Enum.Material.Rock, true)
-        local rock2 = makePart("Rock_Small", Vector3.new(3 * s, 2 * s, 2.5 * s), cf * CFrame.new(2.5 * s, 0.8 * s, 1 * s), Color3.fromRGB(100, 105, 110), Enum.Material.Rock, true)
+        local rock1 = makePart("Rock_Main", Vector3.new(5 * s, 3.5 * s, 4.5 * s), cf * CFrame.new(0, 1.2 * s, 0) * CFrame.Angles(math.rad(15), math.rad(30), 0), Color3.fromRGB(115, 118, 122), Enum.Material.Rock, true)
+        local rock2 = makePart("Rock_Small", Vector3.new(3 * s, 2 * s, 2.5 * s), cf * CFrame.new(2.5 * s, 0.6 * s, 1 * s), Color3.fromRGB(100, 105, 110), Enum.Material.Rock, true)
     end
 
     local function spawnBush(cf, scale)
         local s = scale or 1
-        makePart("Bush", Vector3.new(3.5 * s, 2.8 * s, 3.5 * s), cf * CFrame.new(0, 1.4 * s, 0), Color3.fromRGB(55, 120, 50), Enum.Material.Grass, false)
+        local b1 = makePart("Bush_1", Vector3.new(3.8 * s, 2.8 * s, 3.8 * s), cf * CFrame.new(0, 1.2 * s, 0), Color3.fromRGB(55, 120, 50), Enum.Material.Grass, false)
+        b1.Shape = Enum.PartType.Ball
+
+        local b2 = makePart("Bush_2", Vector3.new(2.8 * s, 2.2 * s, 2.8 * s), cf * CFrame.new(1.0 * s, 1.0 * s, 0.6 * s), Color3.fromRGB(65, 135, 58), Enum.Material.Grass, false)
+        b2.Shape = Enum.PartType.Ball
+
+        local b3 = makePart("Bush_3", Vector3.new(2.6 * s, 2.0 * s, 2.6 * s), cf * CFrame.new(-0.8 * s, 0.9 * s, -0.7 * s), Color3.fromRGB(48, 110, 44), Enum.Material.Grass, false)
+        b3.Shape = Enum.PartType.Ball
     end
 
     local function spawnUrbanClutter(cf)
@@ -130,32 +158,38 @@ local function buildScatter()
         local rayDir = Vector3.new(0, -250, 0)
         local hit = workspace:Raycast(rayOrigin, rayDir, rayParams)
 
-        if hit and hit.Normal.Y > 0.55 then -- Evita acantilados empinados
-            local groundY = hit.Position.Y
-            local groundCF = CFrame.new(posX, groundY, posZ) * CFrame.Angles(0, math.rad((i * 53) % 360), 0)
-            local scale = 0.8 + (((i * 7) % 10) / 20) -- Escala entre 0.8 y 1.25
+        if hit and hit.Normal.Y > 0.55 then
+            local hitName = hit.Instance.Name:lower()
+            -- Evita colocar vegetación sobre techos, paredes, carreteras o estructuras construidas
+            local isObstacle = string.find(hitName, "roof") or string.find(hitName, "wall") or string.find(hitName, "body") or string.find(hitName, "road") or string.find(hitName, "asphalt") or string.find(hitName, "sign") or string.find(hitName, "car") or string.find(hitName, "pole") or string.find(hitName, "fence") or string.find(hitName, "canopy")
 
-            if biome == "urban_clutter" then
-                spawnUrbanClutter(groundCF)
-            elseif biome == "mountain_rocks" then
-                if i % 3 == 0 then
-                    spawnPineTree(groundCF, scale)
-                else
-                    spawnRockCluster(groundCF, scale)
+            if not isObstacle then
+                local groundY = hit.Position.Y
+                local groundCF = CFrame.new(posX, groundY, posZ) * CFrame.Angles(0, math.rad((i * 53) % 360), 0)
+                local scale = 0.8 + (((i * 7) % 10) / 20) -- Escala entre 0.8 y 1.25
+
+                if biome == "urban_clutter" then
+                    spawnUrbanClutter(groundCF)
+                elseif biome == "mountain_rocks" then
+                    if i % 3 == 0 then
+                        spawnPineTree(groundCF, scale)
+                    else
+                        spawnRockCluster(groundCF, scale)
+                    end
+                else -- "forest" (defecto)
+                    if i % 5 == 0 then
+                        spawnRockCluster(groundCF, scale)
+                    elseif i % 5 == 1 then
+                        spawnBush(groundCF, scale)
+                    elseif i % 5 == 2 or i % 5 == 3 then
+                        spawnPineTree(groundCF, scale)
+                    else
+                        spawnOakTree(groundCF, scale)
+                    end
                 end
-            else -- "forest" (defecto)
-                if i % 5 == 0 then
-                    spawnRockCluster(groundCF, scale)
-                elseif i % 5 == 1 then
-                    spawnBush(groundCF, scale)
-                elseif i % 5 == 2 or i % 5 == 3 then
-                    spawnPineTree(groundCF, scale)
-                else
-                    spawnOakTree(groundCF, scale)
-                end
+
+                spawned = spawned + 1
             end
-
-            spawned = spawned + 1
         end
     end
 

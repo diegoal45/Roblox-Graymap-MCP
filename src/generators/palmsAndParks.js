@@ -68,23 +68,43 @@ local function spawnPalm()
     end
 
     local totalH = ${palmH}
-    -- Tronco esbelto segmentado
-    local trunkCF = CFrame.new(0, totalH / 2, 0) * CFrame.Angles(0, 0, math.rad(90))
-    makeCyl("Palm_Trunk", Vector3.new(1.3, totalH, 1.3), trunkCF, Color3.fromRGB(115, 85, 60), Enum.Material.WoodPlanks)
+    -- Base radicular / alcorque de tierra
+    makeCyl("Palm_Base_Dirt", Vector3.new(2.4, 0.4, 2.4), CFrame.new(0, 0.2, 0) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(75, 52, 38), Enum.Material.Ground)
 
-    -- Falda de hojas secas (Skirt) bajo la copa
-    local skirtCF = CFrame.new(0, totalH - 1.5, 0) * CFrame.Angles(0, 0, math.rad(90))
-    makeCyl("Palm_Skirt", Vector3.new(2.4, 3.0, 2.4), skirtCF, Color3.fromRGB(90, 68, 48), Enum.Material.WoodPlanks)
+    -- Tronco esbelto californiano con conicidad realista (base robusta y fuste esbelto)
+    local baseTrunkH = totalH * 0.35
+    local upperTrunkH = totalH * 0.68
+    local baseTrunkCF = CFrame.new(0, baseTrunkH / 2, 0) * CFrame.Angles(0, 0, math.rad(90))
+    makeCyl("Palm_Trunk_Base", Vector3.new(1.8, baseTrunkH, 1.8), baseTrunkCF, Color3.fromRGB(110, 80, 55), Enum.Material.WoodPlanks)
 
-    -- Copa de palmas verdes arqueadas en abanico (10 ramas)
-    local numFronds = 10
+    local upperTrunkCF = CFrame.new(0, totalH * 0.65, 0) * CFrame.Angles(0, 0, math.rad(90))
+    makeCyl("Palm_Trunk_Upper", Vector3.new(1.25, upperTrunkH, 1.25), upperTrunkCF, Color3.fromRGB(120, 90, 65), Enum.Material.WoodPlanks)
+
+    -- Falda de hojas secas marchitas (Skirt) bajo la copa
+    local skirtCF = CFrame.new(0, totalH - 1.2, 0) * CFrame.Angles(0, 0, math.rad(90))
+    makeCyl("Palm_Skirt", Vector3.new(2.6, 2.8, 2.6), skirtCF, Color3.fromRGB(92, 68, 45), Enum.Material.WoodPlanks)
+
+    -- Corazón central de la copa
+    local heart = makePart("Palm_Heart", Vector3.new(2.2, 2.0, 2.2), CFrame.new(0, totalH + 0.2, 0), Color3.fromRGB(42, 105, 38), Enum.Material.Grass)
+    heart.Shape = Enum.PartType.Ball
+
+    -- Copa de palmas verdes arqueadas en abanico (12 ramas con caída natural)
+    local numFronds = 12
     for i = 1, numFronds do
         local angle = (i / numFronds) * math.pi * 2
-        local frondDist = 4.2
+        local frondDist = 3.8
         local fX = math.cos(angle) * frondDist
         local fZ = math.sin(angle) * frondDist
-        local fCF = CFrame.new(fX, totalH + 0.5, fZ) * CFrame.Angles(math.rad(-25 * math.sin(angle)), angle, math.rad(25 * math.cos(angle)))
-        makePart("Frond_" .. i, Vector3.new(1.8, 0.2, 7.5), fCF, Color3.fromRGB(48, 125, 42), Enum.Material.Grass)
+        -- Inclinación arqueada descendente realista
+        local fCF = CFrame.new(fX, totalH - 0.2, fZ) * CFrame.Angles(math.rad(-30 * math.sin(angle)), angle, math.rad(30 * math.cos(angle)))
+        makePart("Frond_" .. i, Vector3.new(2.2, 0.25, 7.8), fCF, Color3.fromRGB(48, 128, 42), Enum.Material.Grass)
+
+        -- Punta caída de la palma
+        local tipDist = 6.8
+        local tipX = math.cos(angle) * tipDist
+        local tipZ = math.sin(angle) * tipDist
+        local tipCF = CFrame.new(tipX, totalH - 1.6, tipZ) * CFrame.Angles(math.rad(-45 * math.sin(angle)), angle, math.rad(45 * math.cos(angle)))
+        makePart("Frond_Tip_" .. i, Vector3.new(1.8, 0.2, 4.2), tipCF, Color3.fromRGB(58, 140, 48), Enum.Material.Grass)
     end
 end
 
@@ -138,8 +158,8 @@ local function buildPocketPark()
         p.CanCollide = canCol ~= nil and canCol or true
         p.CanTouch = false
         if isDecor then p.CanQuery = false end
-        p.TopSurface = Enum.TopSurfaceType.Smooth
-        p.BottomSurface = Enum.BottomSurfaceType.Smooth
+        p.TopSurface = Enum.SurfaceType.Smooth
+        p.BottomSurface = Enum.SurfaceType.Smooth
         p.Size = sz
         p.CFrame = cf
         p.Color = col
@@ -231,8 +251,15 @@ local function buildPocketPark()
         local palmX = cx + cp[1]
         local palmZ = cz + cp[2]
         local pH = 28
-        makeCyl("Palm_Trunk_" .. ci, Vector3.new(1.2, pH, 1.2), CFrame.new(palmX, cy + 1.2 + pH / 2, palmZ) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(115, 85, 60), Enum.Material.WoodPlanks)
-        makePart("Palm_Crown_" .. ci, Vector3.new(9, 1.2, 9), CFrame.new(palmX, cy + 1.2 + pH + 0.6, palmZ), Color3.fromRGB(48, 125, 42), Enum.Material.Grass, false)
+        local pHeart = makePart("Palm_Heart_" .. ci, Vector3.new(2.4, 2.0, 2.4), CFrame.new(palmX, cy + 1.2 + pH + 0.4, palmZ), Color3.fromRGB(42, 105, 38), Enum.Material.Grass, false)
+        pHeart.Shape = Enum.PartType.Ball
+
+        for pf = 1, 8 do
+            local pAng = (pf / 8) * math.pi * 2
+            local pfCF = CFrame.new(palmX + math.cos(pAng) * 3.2, cy + 1.2 + pH, palmZ + math.sin(pAng) * 3.2)
+                * CFrame.Angles(math.rad(-25 * math.sin(pAng)), pAng, math.rad(25 * math.cos(pAng)))
+            makePart("Frond_" .. ci .. "_" .. pf, Vector3.new(2.0, 0.25, 7.0), pfCF, Color3.fromRGB(48, 128, 42), Enum.Material.Grass, false)
+        end
 
         -- Parterre de flores de colores al pie de la palmera
         makePart("Flowerbed_" .. ci, Vector3.new(6.0, 0.3, 6.0), CFrame.new(palmX, cy + 1.35, palmZ), Color3.fromRGB(195, 70, 95), Enum.Material.Grass, false)

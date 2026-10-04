@@ -49,8 +49,8 @@ local function buildWedge()
     w.Name = "${name}"
     w.Anchored = true
     w.CanCollide = true
-    w.TopSurface = Enum.TopSurfaceType.Smooth
-    w.BottomSurface = Enum.BottomSurfaceType.Smooth
+    w.TopSurface = Enum.SurfaceType.Smooth
+    w.BottomSurface = Enum.SurfaceType.Smooth
     w.Size = Vector3.new(${sx}, ${sy}, ${sz})
 
     local rx, ry, rz = math.rad(${rotation[0] || 0}), math.rad(${rotation[1] || 0}), math.rad(${rotation[2] || 0})

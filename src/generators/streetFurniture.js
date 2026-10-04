@@ -52,8 +52,8 @@ local function buildFurniture()
         p.CanCollide = canCol ~= nil and canCol or false
         p.CanTouch = false
         if isDecor then p.CanQuery = false end
-        p.TopSurface = Enum.TopSurfaceType.Smooth
-        p.BottomSurface = Enum.BottomSurfaceType.Smooth
+        p.TopSurface = Enum.SurfaceType.Smooth
+        p.BottomSurface = Enum.SurfaceType.Smooth
         p.Size = sz
         p.CFrame = cf
         p.Color = col
@@ -82,9 +82,19 @@ local function buildFurniture()
         makePart("Tree_Dirt", Vector3.new(3.4, 0.2, 3.4), cf * CFrame.new(0, 0.12, 0), Color3.fromRGB(75, 55, 40), Enum.Material.Ground, false)
         -- Tronco
         local trunk = makePart("Tree_Trunk", Vector3.new(1.3, 8.5, 1.3), cf * CFrame.new(0, 4.35, 0), Color3.fromRGB(85, 55, 35), Enum.Material.WoodPlanks, true)
-        -- Copa frondosa escalonada
-        local crown1 = makePart("Tree_Crown_1", Vector3.new(6.8, 5.5, 6.8), cf * CFrame.new(0, 10.0, 0), Color3.fromRGB(55, 125, 50), Enum.Material.Grass, false)
-        local crown2 = makePart("Tree_Crown_2", Vector3.new(5.0, 4.5, 5.0), cf * CFrame.new(0, 13.5, 0), Color3.fromRGB(70, 145, 60), Enum.Material.Grass, false)
+        
+        -- Copa frondosa esférica orgánica (AAA Foliage)
+        local c1 = makePart("Tree_Crown_Main", Vector3.new(7.2, 6.8, 7.2), cf * CFrame.new(0, 11.0, 0), Color3.fromRGB(52, 125, 48), Enum.Material.Grass, false)
+        c1.Shape = Enum.PartType.Ball
+
+        local c2 = makePart("Tree_Crown_L", Vector3.new(5.2, 4.8, 5.2), cf * CFrame.new(1.5, 12.2, 0.8), Color3.fromRGB(68, 145, 58), Enum.Material.Grass, false)
+        c2.Shape = Enum.PartType.Ball
+
+        local c3 = makePart("Tree_Crown_R", Vector3.new(5.0, 4.6, 5.0), cf * CFrame.new(-1.4, 11.8, -1.0), Color3.fromRGB(48, 112, 44), Enum.Material.Grass, false)
+        c3.Shape = Enum.PartType.Ball
+
+        local c4 = makePart("Tree_Crown_Top", Vector3.new(4.6, 4.4, 4.6), cf * CFrame.new(0.4, 13.6, -0.4), Color3.fromRGB(62, 138, 54), Enum.Material.Grass, false)
+        c4.Shape = Enum.PartType.Ball
     end
 
     local function spawnBench(cf)
@@ -153,9 +163,18 @@ local function buildFurniture()
                 posZ = ${cz} + (side * offset)
             end
 
-            local rotY = side == 1 and 0 or math.rad(180)
-            if not isZ then
-                rotY = side == 1 and math.rad(90) or math.rad(-90)
+            -- Orientación calculada exactamente para que el mobiliario mire hacia la calzada
+            local rotY
+            if isZ then
+                -- Calle a lo largo de Z: calzada en X = cx
+                -- side = 1 (+X): mira hacia -X (rot -90°)
+                -- side = -1 (-X): mira hacia +X (rot 90°)
+                rotY = (side == 1) and math.rad(-90) or math.rad(90)
+            else
+                -- Calle a lo largo de X: calzada en Z = cz
+                -- side = 1 (+Z): mira hacia -Z (rot 180°)
+                -- side = -1 (-Z): mira hacia +Z (rot 0°)
+                rotY = (side == 1) and math.rad(180) or 0
             end
 
             local itemCF = CFrame.new(posX, ${cy}, posZ) * CFrame.Angles(0, rotY, 0)

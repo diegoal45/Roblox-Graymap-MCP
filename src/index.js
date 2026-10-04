@@ -929,6 +929,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             has_porch: { type: "boolean", default: true, description: "Porche delantero cubierto con escalones y farol" },
             has_fence: { type: "boolean", default: true, description: "Valla perimetral de madera blanca o delimitación" },
             has_yard_props: { type: "boolean", default: true, description: "Buzón americano a pie de calle, camino de losas, barbacoa y cubos de basura" },
+            rotation_y: { type: "number", default: 0, description: "Rotación en el eje Y en grados (0, 90, 180, 270) para encarar la calle deseada" },
             parent: { type: "string", default: "City/Houses" },
           },
           required: ["position"],
@@ -2317,6 +2318,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         hasPorch: args.has_porch ?? true,
         hasFence: args.has_fence ?? true,
         hasYardProps: args.has_yard_props ?? true,
+        rotationY: args.rotation_y ?? 0,
         parent: args.parent || "City/Houses",
       });
 

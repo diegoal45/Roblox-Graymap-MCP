@@ -102,8 +102,8 @@ local function buildCompleteDistrict()
         p.CanCollide = canCol ~= nil and canCol or true
         p.CanTouch = false
         if isDecor then p.CanQuery = false end
-        p.TopSurface = Enum.TopSurfaceType.Smooth
-        p.BottomSurface = Enum.BottomSurfaceType.Smooth
+        p.TopSurface = Enum.SurfaceType.Smooth
+        p.BottomSurface = Enum.SurfaceType.Smooth
         p.Size = sz
         p.CFrame = cf
         p.Color = col
@@ -345,7 +345,7 @@ local function buildCompleteDistrict()
                 local body = makePart("House_Body", Vector3.new(hW, hH, hD), CFrame.new(houseX, bBaseY + 1.4 + hH / 2, houseZ), hWallCol, Enum.Material.WoodPlanks, true)
                 body.Parent = houseModel
 
-                -- Tejado a dos aguas (Wedges izquierda y derecha)
+                -- Tejadillo a dos aguas (Wedges izquierda y derecha)
                 local roofBaseY = bBaseY + 1.4 + hH
                 local halfRoofW = (hW + 2.4) / 2
                 local roofD = hD + 2.4
@@ -357,6 +357,23 @@ local function buildCompleteDistrict()
                 local rWedgeR = makeWedge("Roof_R", Vector3.new(roofD, roofH, halfRoofW),
                     CFrame.new(houseX + halfRoofW / 2, roofBaseY + roofH / 2, houseZ) * CFrame.Angles(0, math.rad(90), 0), hRoofCol, Enum.Material.WoodPlanks)
                 rWedgeR.Parent = houseModel
+
+                -- Hastiales triangulares frontal y trasero recortados exactos
+                local gThick = 0.5
+                local hHalfW = hW / 2
+                local gFL = makeWedge("Gable_FL", Vector3.new(gThick, roofH, hHalfW),
+                    CFrame.new(houseX - hHalfW / 2, roofBaseY + roofH / 2, houseZ + hD / 2) * CFrame.Angles(0, math.rad(-90), 0), hWallCol, Enum.Material.WoodPlanks)
+                gFL.Parent = houseModel
+                local gFR = makeWedge("Gable_FR", Vector3.new(gThick, roofH, hHalfW),
+                    CFrame.new(houseX + hHalfW / 2, roofBaseY + roofH / 2, houseZ + hD / 2) * CFrame.Angles(0, math.rad(90), 0), hWallCol, Enum.Material.WoodPlanks)
+                gFR.Parent = houseModel
+
+                local gBL = makeWedge("Gable_BL", Vector3.new(gThick, roofH, hHalfW),
+                    CFrame.new(houseX - hHalfW / 2, roofBaseY + roofH / 2, houseZ - hD / 2) * CFrame.Angles(0, math.rad(-90), 0), hWallCol, Enum.Material.WoodPlanks)
+                gBL.Parent = houseModel
+                local gBR = makeWedge("Gable_BR", Vector3.new(gThick, roofH, hHalfW),
+                    CFrame.new(houseX + hHalfW / 2, roofBaseY + roofH / 2, houseZ - hD / 2) * CFrame.Angles(0, math.rad(90), 0), hWallCol, Enum.Material.WoodPlanks)
+                gBR.Parent = houseModel
 
                 -- Chimenea de ladrillo
                 local chim = makePart("Chimney", Vector3.new(2.4, roofH + 3.5, 2.4), CFrame.new(houseX + hW / 4, roofBaseY + (roofH + 3.5) / 2, houseZ - hD / 4), Color3.fromRGB(145, 60, 42), Enum.Material.Brick, true)
@@ -378,8 +395,8 @@ local function buildCompleteDistrict()
                 local pCol2 = makePart("Porch_Col_2", Vector3.new(0.8, porchH, 0.8), CFrame.new(porchX + porchW / 2 - 0.6, bBaseY + 1.4 + porchH / 2, porchZ + (facesSouth and (porchD / 2 - 0.6) or (-porchD / 2 + 0.6))), hTrimCol, Enum.Material.WoodPlanks, true)
                 pCol2.Parent = houseModel
 
-                -- Tejadillo del porche
-                local pRoofCF = CFrame.new(porchX, bBaseY + 1.4 + porchH + 1.0, porchZ) * (facesSouth and CFrame.Angles(0, math.rad(180), 0) or CFrame.Angles(0, 0, 0))
+                -- Tejadillo del porche (orientado para verter hacia la calle)
+                local pRoofCF = CFrame.new(porchX, bBaseY + 1.4 + porchH + 1.0, porchZ) * (facesSouth and CFrame.Angles(0, 0, 0) or CFrame.Angles(0, math.rad(180), 0))
                 local pRoof = makeWedge("Porch_Roof", Vector3.new(porchW + 1.0, 2.0, porchD + 1.0), pRoofCF, hRoofCol, Enum.Material.WoodPlanks)
                 pRoof.Parent = houseModel
 
@@ -397,14 +414,15 @@ local function buildCompleteDistrict()
                 pL.Range = 16
                 pL.Brightness = 1.4
 
-                -- Ventanas con contraventanas (Shutters)
+                -- Ventanas con contraventanas (Shutters) sin solapamiento
                 local winZPos = facesSouth and (houseZ + hD / 2 + 0.1) or (houseZ - hD / 2 - 0.1)
-                local win1 = makePart("Win_Front", Vector3.new(3.6, 4.8, 0.2), CFrame.new(houseX + hW / 2 - 4.5, bBaseY + 1.4 + 4.8, winZPos), Color3.fromRGB(210, 225, 240), Enum.Material.Glass, false, true)
+                local winCenterX = houseX + hW / 2 - 4.5
+                local win1 = makePart("Win_Front", Vector3.new(3.4, 4.8, 0.2), CFrame.new(winCenterX, bBaseY + 1.4 + 4.8, winZPos), Color3.fromRGB(210, 225, 240), Enum.Material.Glass, false, true)
                 win1.Transparency = 0.35
                 win1.Parent = houseModel
-                local shutL = makePart("Shutter_L", Vector3.new(1.2, 4.8, 0.2), CFrame.new(houseX + hW / 2 - 6.6, bBaseY + 1.4 + 4.8, winZPos), Color3.fromRGB(45, 65, 50), Enum.Material.WoodPlanks, false, true)
+                local shutL = makePart("Shutter_L", Vector3.new(1.1, 4.8, 0.2), CFrame.new(winCenterX - 2.5, bBaseY + 1.4 + 4.8, winZPos), Color3.fromRGB(45, 65, 50), Enum.Material.WoodPlanks, false, true)
                 shutL.Parent = houseModel
-                local shutR = makePart("Shutter_R", Vector3.new(1.2, 4.8, 0.2), CFrame.new(houseX + hW / 2 - 2.4, bBaseY + 1.4 + 4.8, winZPos), Color3.fromRGB(45, 65, 50), Enum.Material.WoodPlanks, false, true)
+                local shutR = makePart("Shutter_R", Vector3.new(1.1, 4.8, 0.2), CFrame.new(winCenterX + 2.5, bBaseY + 1.4 + 4.8, winZPos), Color3.fromRGB(45, 65, 50), Enum.Material.WoodPlanks, false, true)
                 shutR.Parent = houseModel
 
                 -- Garaje adosado
@@ -474,8 +492,8 @@ local function buildCompleteDistrict()
                     p.CanCollide = canCol ~= nil and canCol or true
                     p.CanTouch = false
                     if isDecor then p.CanQuery = false end
-                    p.TopSurface = Enum.TopSurfaceType.Smooth
-                    p.BottomSurface = Enum.BottomSurfaceType.Smooth
+                    p.TopSurface = Enum.SurfaceType.Smooth
+                    p.BottomSurface = Enum.SurfaceType.Smooth
                     p.Size = sz
                     p.CFrame = cf
                     p.Color = col
@@ -673,43 +691,55 @@ local function buildCompleteDistrict()
 
     local poleStep = 60
     local poleH = 24
-    local polePositions = {}
+    local southPoles = {}
+    local northPoles = {}
 
-    -- Postes a lo largo de las aceras Sur y Norte
-    for px = blockMinX + 10, blockMaxX - 10, poleStep do
-        local poleZ_S = blockMaxZ - swW - 1.0
-        local poleZ_N = blockMinZ + swW + 1.0
-        table.insert(polePositions, {px, cy + curbH, poleZ_S})
-        table.insert(polePositions, {px, cy + curbH, poleZ_N})
+    -- Postes posicionados en la franja exterior de la acera (junto al bordillo, no dentro de las parcelas privadas)
+    for px = blockMinX + 16, blockMaxX - 16, poleStep do
+        table.insert(southPoles, {px, cy + curbH, blockMaxZ - 2.5})
+        table.insert(northPoles, {px, cy + curbH, blockMinZ + 2.5})
     end
 
-    for idx, pos in ipairs(polePositions) do
+    local function spawnPoleWithEquipment(pos, id)
         local pX, pY, pZ = pos[1], pos[2], pos[3]
-        -- Poste de madera cilíndrico
-        local poleP = makePart("Utility_Pole_" .. idx, Vector3.new(1.1, poleH, 1.1), CFrame.new(pX, pY + poleH / 2, pZ), Color3.fromRGB(80, 58, 42), Enum.Material.WoodPlanks, true)
+        local poleP = makePart("Utility_Pole_" .. id, Vector3.new(1.1, poleH, 1.1), CFrame.new(pX, pY + poleH / 2, pZ), Color3.fromRGB(80, 58, 42), Enum.Material.WoodPlanks, true)
         poleP.Parent = poleModel
 
-        -- Cruceta horizontal superior de madera
-        local arm = makePart("Crossarm_" .. idx, Vector3.new(6.0, 0.4, 0.4), CFrame.new(pX, pY + poleH - 1.2, pZ), Color3.fromRGB(75, 52, 38), Enum.Material.WoodPlanks, false, true)
+        local arm = makePart("Crossarm_" .. id, Vector3.new(6.0, 0.4, 0.4), CFrame.new(pX, pY + poleH - 1.2, pZ), Color3.fromRGB(75, 52, 38), Enum.Material.WoodPlanks, false, true)
         arm.Parent = poleModel
 
-        -- Transformador cilíndrico metálico (en postes alternos)
-        if idx % 2 == 1 then
+        if id % 2 == 1 then
             local transCF = CFrame.new(pX + 0.8, pY + poleH - 4.5, pZ) * CFrame.Angles(0, 0, math.rad(90))
-            local trans = makeCylinder("Transformer_" .. idx, Vector3.new(2.0, 3.2, 2.0), transCF, Color3.fromRGB(85, 90, 95), Enum.Material.Metal)
+            local trans = makeCylinder("Transformer_" .. id, Vector3.new(2.0, 3.2, 2.0), transCF, Color3.fromRGB(85, 90, 95), Enum.Material.Metal)
             trans.Parent = poleModel
         end
     end
 
-    -- Cables aéreos negros tendidos entre postes contiguos
-    for i = 1, #polePositions - 2, 2 do
-        local p1 = polePositions[i]
-        local p2 = polePositions[i + 2]
+    for idx, pos in ipairs(southPoles) do
+        spawnPoleWithEquipment(pos, "S_" .. idx)
+    end
+    for idx, pos in ipairs(northPoles) do
+        spawnPoleWithEquipment(pos, "N_" .. idx)
+    end
+
+    -- Conexión de cables aéreos para la acera Sur
+    for i = 1, #southPoles - 1 do
+        local p1, p2 = southPoles[i], southPoles[i + 1]
         local mid = Vector3.new((p1[1] + p2[1]) / 2, p1[2] + poleH - 1.2, p1[3])
         local span = math.abs(p2[1] - p1[1])
-        -- 3 cables paralelos tendidos a través de la cruceta
         for cOff = -2.2, 2.2, 2.2 do
-            local wire = makePart("Cable_" .. i .. "_" .. math.floor(cOff), Vector3.new(span, 0.12, 0.12), CFrame.new(mid.X, mid.Y, mid.Z + cOff), Color3.fromRGB(25, 25, 28), Enum.Material.Metal, false, true)
+            local wire = makePart("Cable_S_" .. i .. "_" .. math.floor(cOff), Vector3.new(span, 0.12, 0.12), CFrame.new(mid.X, mid.Y, mid.Z + cOff), Color3.fromRGB(25, 25, 28), Enum.Material.Metal, false, true)
+            wire.Parent = poleModel
+        end
+    end
+
+    -- Conexión de cables aéreos para la acera Norte
+    for i = 1, #northPoles - 1 do
+        local p1, p2 = northPoles[i], northPoles[i + 1]
+        local mid = Vector3.new((p1[1] + p2[1]) / 2, p1[2] + poleH - 1.2, p1[3])
+        local span = math.abs(p2[1] - p1[1])
+        for cOff = -2.2, 2.2, 2.2 do
+            local wire = makePart("Cable_N_" .. i .. "_" .. math.floor(cOff), Vector3.new(span, 0.12, 0.12), CFrame.new(mid.X, mid.Y, mid.Z + cOff), Color3.fromRGB(25, 25, 28), Enum.Material.Metal, false, true)
             wire.Parent = poleModel
         end
     end
@@ -744,8 +774,19 @@ local function buildCompleteDistrict()
         grate.Parent = furnModel
         local trunk = makePart("Tree_Trunk", Vector3.new(1.4, 8.5, 1.4), cf * CFrame.new(0, 4.35, 0), Color3.fromRGB(85, 55, 35), Enum.Material.WoodPlanks, true)
         trunk.Parent = furnModel
-        local crown = makePart("Tree_Crown", Vector3.new(7.0, 6.5, 7.0), cf * CFrame.new(0, 10.8, 0), Color3.fromRGB(55, 125, 50), Enum.Material.Grass, false)
-        crown.Parent = furnModel
+
+        -- Copa esférica orgánica (AAA Foliage)
+        local c1 = makePart("Tree_Crown_Main", Vector3.new(7.4, 6.8, 7.4), cf * CFrame.new(0, 10.8, 0), Color3.fromRGB(55, 125, 50), Enum.Material.Grass, false)
+        c1.Shape = Enum.PartType.Ball
+        c1.Parent = furnModel
+
+        local c2 = makePart("Tree_Crown_Sub1", Vector3.new(5.2, 4.6, 5.2), cf * CFrame.new(1.4, 12.0, 0.8), Color3.fromRGB(68, 142, 58), Enum.Material.Grass, false)
+        c2.Shape = Enum.PartType.Ball
+        c2.Parent = furnModel
+
+        local c3 = makePart("Tree_Crown_Sub2", Vector3.new(5.0, 4.4, 5.0), cf * CFrame.new(-1.3, 11.6, -0.9), Color3.fromRGB(48, 112, 45), Enum.Material.Grass, false)
+        c3.Shape = Enum.PartType.Ball
+        c3.Parent = furnModel
     end
 
     local function spawnHydrant(cf)

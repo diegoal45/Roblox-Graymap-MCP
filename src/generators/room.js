@@ -46,8 +46,8 @@ local function createRoom()
         p.Name = pName
         p.Anchored = true
         p.CanCollide = true
-        p.TopSurface = Enum.TopSurfaceType.Smooth
-        p.BottomSurface = Enum.BottomSurfaceType.Smooth
+        p.TopSurface = Enum.SurfaceType.Smooth
+        p.BottomSurface = Enum.SurfaceType.Smooth
         p.Material = Enum.Material.SmoothPlastic
         p.Color = color
         p.Size = size

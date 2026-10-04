@@ -51,21 +51,73 @@ app.get("/status", (req, res) => {
   });
 });
 
+// Endpoint para recibir comandos de ejecución desde cualquier cliente externo (Antigravity, curl, scripts)
+app.post("/execute", async (req, res) => {
+  const { code, actionName = "API Execute", extraPayload = {}, timeoutMs = 45000 } = req.body;
+  if (!code) {
+    return res.status(400).json({ error: "Missing 'code' field in request body" });
+  }
+  try {
+    const result = await sendToRoblox(code, actionName, extraPayload, timeoutMs);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 let serverInstance = null;
+let isBridgeServer = false;
 
 export function startBridge() {
-  if (serverInstance) return;
-  serverInstance = app.listen(BRIDGE_PORT, BRIDGE_HOST, () => {
-    console.error(`[Bridge] Servidor HTTP local activo en http://${BRIDGE_HOST}:${BRIDGE_PORT}`);
-  });
+  if (serverInstance || isBridgeServer) return;
+  try {
+    serverInstance = app.listen(BRIDGE_PORT, BRIDGE_HOST, () => {
+      isBridgeServer = true;
+      console.error(`[Bridge] Servidor HTTP local activo en http://${BRIDGE_HOST}:${BRIDGE_PORT}`);
+    });
+    serverInstance.on("error", (err) => {
+      if (err.code === "EADDRINUSE") {
+        console.error(`[Bridge] Puerto ${BRIDGE_PORT} ya ocupado. Operando en modo cliente forwarder.`);
+        isBridgeServer = false;
+        serverInstance = null;
+      } else {
+        console.error("[Bridge] Error en servidor HTTP:", err);
+      }
+    });
+  } catch (e) {
+    isBridgeServer = false;
+  }
 }
 
-export function isStudioConnected() {
+export async function isStudioConnected() {
+  if (!isBridgeServer && !serverInstance) {
+    try {
+      const resp = await fetch(`http://${BRIDGE_HOST}:${BRIDGE_PORT}/status`);
+      if (resp.ok) {
+        const data = await resp.json();
+        return !!data.studioConnected;
+      }
+    } catch (e) {
+      return false;
+    }
+  }
   return Date.now() - lastStudioHeartbeat < 4000;
 }
 
-export function getStudioStatusInfo() {
-  const connected = isStudioConnected();
+export async function getStudioStatusInfo() {
+  if (!isBridgeServer && !serverInstance) {
+    try {
+      const resp = await fetch(`http://${BRIDGE_HOST}:${BRIDGE_PORT}/status`);
+      if (resp.ok) {
+        const data = await resp.json();
+        return {
+          connected: !!data.studioConnected,
+          lastHeartbeatSecondsAgo: data.secondsSinceLastPing,
+        };
+      }
+    } catch (e) {}
+  }
+  const connected = Date.now() - lastStudioHeartbeat < 4000;
   const diffSec = Math.floor((Date.now() - lastStudioHeartbeat) / 1000);
   return {
     connected,
@@ -80,7 +132,22 @@ export function getStudioStatusInfo() {
  * @param {object} extraPayload - Datos adicionales (ej. queries para get_workspace_layout)
  * @param {number} timeoutMs - Tiempo límite de espera
  */
-export function sendToRoblox(luauCode, actionName = "Graybox Action", extraPayload = {}, timeoutMs = 25000) {
+export async function sendToRoblox(luauCode, actionName = "Graybox Action", extraPayload = {}, timeoutMs = 45000) {
+  if (!isBridgeServer && !serverInstance) {
+    try {
+      const resp = await fetch(`http://${BRIDGE_HOST}:${BRIDGE_PORT}/execute`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: luauCode, actionName, extraPayload, timeoutMs }),
+      });
+      if (resp.ok) {
+        return await resp.json();
+      }
+    } catch (e) {
+      // Si la conexión falla, continúa con la cola local
+    }
+  }
+
   return new Promise((resolve, reject) => {
     const id = "cmd_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
 

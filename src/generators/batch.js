@@ -117,8 +117,8 @@ local function buildItem(data)
     instance.CanCollide = data.canCollide
     instance.Anchored = data.anchored
     instance.CastShadow = data.castShadow
-    instance.TopSurface = Enum.TopSurfaceType.Smooth
-    instance.BottomSurface = Enum.BottomSurfaceType.Smooth
+    instance.TopSurface = Enum.SurfaceType.Smooth
+    instance.BottomSurface = Enum.SurfaceType.Smooth
 
     -- PERFORMANCE SHIELD: Poda de física para servidores de 50 jugadores
     if autoOpt then

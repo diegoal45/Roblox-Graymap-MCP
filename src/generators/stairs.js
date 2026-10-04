@@ -55,8 +55,8 @@ local function createStairs()
         p.Name = "Step_" .. i
         p.Anchored = true
         p.CanCollide = true
-        p.TopSurface = Enum.TopSurfaceType.Smooth
-        p.BottomSurface = Enum.BottomSurfaceType.Smooth
+        p.TopSurface = Enum.SurfaceType.Smooth
+        p.BottomSurface = Enum.SurfaceType.Smooth
         p.Material = Enum.Material.SmoothPlastic
         p.Color = stairColor
 

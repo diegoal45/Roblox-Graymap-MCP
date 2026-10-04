@@ -66,8 +66,8 @@ local function buildProp()
         p.CanCollide = canCol ~= nil and canCol or true
         p.CanTouch = false
         p.CastShadow = castShad ~= nil and castShad or true
-        p.TopSurface = Enum.TopSurfaceType.Smooth
-        p.BottomSurface = Enum.BottomSurfaceType.Smooth
+        p.TopSurface = Enum.SurfaceType.Smooth
+        p.BottomSurface = Enum.SurfaceType.Smooth
         p.Size = size
         p.CFrame = baseCF * relCF
         p.Color = color

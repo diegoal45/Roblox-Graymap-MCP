@@ -3,13 +3,16 @@ import { snapVal } from "./grid.js";
 /**
  * Generador de Casas Residenciales Realistas Estilo GTA San Andreas / Urbano AAA.
  * Construye viviendas unifamiliares completas con:
- * - Tejado a dos aguas o cuatro aguas con aleros sobresalientes, tejas/shingles y chimenea
- * - Porche delantero cubierto con escalones de acceso, barandillas y farol colgante
- * - Puerta residencial moldeada con manilla de latón y felpudo
- * - Ventanas con contraventanas de madera (shutters), alféizares y cortinas interiores
- * - Garaje adosado con portón seccional y camino de entrada de hormigón (driveway)
+ * - Tejado a dos aguas (gable) con piñones triangulares recortados exactos, o tejado a cuatro aguas (hip),
+ *   o terraza plana moderna (mansion). Aleros volados, tejas PBR y chimenea de ladrillo
+ * - Porche delantero cubierto con escalones de acceso, barandillas, columnas y farol colgante
+ *   (tejadillo correctamente orientado que vierte hacia el exterior)
+ * - Puerta residencial moldeada con marco, manilla de latón y felpudo
+ * - Ventanas 3D sin solapamientos, con contraventanas de madera bien posicionadas, alféizares y luz interior
+ * - Garaje adosado con portón seccional, foco y camino de entrada de hormigón (driveway)
  * - Jardín delantero con césped, camino de losas de piedra, buzón americano a pie de calle
  * - Patio trasero vallado con barbacoa, mesa de picnic y cubos de basura rodantes
+ * - Soporte de rotación completa (rotationY) para orientar la casa a cualquier calle
  */
 
 export const HOUSE_STYLES = {
@@ -54,7 +57,7 @@ export const HOUSE_STYLES = {
     shutterColor: [35, 38, 45],
     doorColor: [40, 42, 48],
     floors: 2,
-    roofType: "mansard_dormer",
+    roofType: "gable",
   },
 
   vinewood_mansion: {
@@ -103,6 +106,7 @@ export function generateHouseLuau({
   position = [0, 0, 0],
   lotSize = [56, 72], // [widthX, depthZ] de la parcela
   style = "suburban_bungalow",
+  rotationY = 0,
   seed = 2024,
   hasGarage = true,
   hasPorch = true,
@@ -113,6 +117,7 @@ export function generateHouseLuau({
   const [posX, posY, posZ] = [snapVal(position[0], 4), snapVal(position[1], 4), snapVal(position[2], 4)];
   const [lotW, lotD] = [Math.max(40, snapVal(lotSize[0], 4)), Math.max(50, snapVal(lotSize[1] || lotSize[2] || 72, 4))];
   const effectiveSeed = typeof seed === "number" ? seed : 2024;
+  const rotY = typeof rotationY === "number" ? rotationY : 0;
 
   const styleKey = (style || "").toLowerCase().replace(/[^a-z0-9_]/g, "_");
   const config = HOUSE_STYLES[styleKey] || HOUSE_STYLES.suburban_bungalow;
@@ -127,6 +132,7 @@ export function generateHouseLuau({
   const houseD = Math.min(lotD - 24, 34);
   const wallH = config.floors === 2 ? 19 : 10;
   const roofH = 7.5;
+  const isTwoStory = config.floors === 2;
 
   return `
 local CollectionService = game:GetService("CollectionService")
@@ -150,15 +156,17 @@ local function buildRealisticHouse()
     houseModel.Name = "${name}"
     pcall(function() houseModel.LevelOfDetail = Enum.ModelLevelOfDetail.StreamingMesh end)
 
-    local cx = ${posX}
-    local cy = ${posY}
-    local cz = ${posZ}
+    -- CFrame base con rotación sobre el punto de inserción
+    local originCF = CFrame.new(${posX}, ${posY}, ${posZ}) * CFrame.Angles(0, math.rad(${rotY}), 0)
+
     local lotW = ${lotW}
     local lotD = ${lotD}
     local hW = ${houseW}
     local hD = ${houseD}
     local wallH = ${wallH}
     local roofH = ${roofH}
+    local isTwoStory = ${isTwoStory ? "true" : "false"}
+    local roofType = "${config.roofType || "gable"}"
     local seedVal = ${effectiveSeed}
 
     -- PALETA DE COLOR Y MATERIALES PBR
@@ -174,36 +182,36 @@ local function buildRealisticHouse()
     local matWall = Enum.Material.${config.wallMaterials[0]}
     local matRoof = Enum.Material.${config.roofMaterial}
 
-    local function makePart(pName, sz, cf, col, mat, canCol, isDecor)
+    local function makePart(pName, sz, relCF, col, mat, canCol, isDecor)
         local p = Instance.new("Part", houseModel)
         p.Name = pName
         p.Anchored = true
         p.CanCollide = canCol ~= nil and canCol or true
         p.CanTouch = false
         if isDecor then p.CanQuery = false end
-        p.TopSurface = Enum.TopSurfaceType.Smooth
-        p.BottomSurface = Enum.BottomSurfaceType.Smooth
+        p.TopSurface = Enum.SurfaceType.Smooth
+        p.BottomSurface = Enum.SurfaceType.Smooth
         p.Size = sz
-        p.CFrame = cf
+        p.CFrame = originCF * relCF
         p.Color = col
         p.Material = mat or matWall
         return p
     end
 
-    local function makeWedge(pName, sz, cf, col, mat)
+    local function makeWedge(pName, sz, relCF, col, mat)
         local w = Instance.new("WedgePart", houseModel)
         w.Name = pName
         w.Anchored = true
         w.CanCollide = true
         w.CanTouch = false
         w.Size = sz
-        w.CFrame = cf
+        w.CFrame = originCF * relCF
         w.Color = col
         w.Material = mat or matRoof
         return w
     end
 
-    local function makeCylinder(pName, sz, cf, col, mat, canCol)
+    local function makeCylinder(pName, sz, relCF, col, mat, canCol)
         local p = Instance.new("Part", houseModel)
         p.Name = pName
         p.Shape = Enum.PartType.Cylinder
@@ -212,28 +220,27 @@ local function buildRealisticHouse()
         p.CanTouch = false
         p.CanQuery = false
         p.Size = sz
-        p.CFrame = cf
+        p.CFrame = originCF * relCF
         p.Color = col
         p.Material = mat or Enum.Material.Metal
         return p
     end
 
     -- 1. PARCELA RESIDENCIAL: CÉSPED, CALZADA DE VEHÍCULOS (DRIVEWAY) Y CIMENTACIÓN
-    -- Plataforma de césped del lote
-    makePart("Lot_Grass_Lawn", Vector3.new(lotW, 1.2, lotD), CFrame.new(cx, cy + 0.6, cz), colGrass, Enum.Material.Grass, true)
+    makePart("Lot_Grass_Lawn", Vector3.new(lotW, 1.2, lotD), CFrame.new(0, 0.6, 0), colGrass, Enum.Material.Grass, true)
 
-    -- Camino de entrada de vehículos de hormigón (Driveway) en el lateral derecho
+    -- Camino de entrada de vehículos de hormigón (Driveway) en el lateral derecho (+X, +Z)
     local driveW = 12
-    local driveLen = lotD * 0.65
-    local driveX = cx + lotW / 2 - driveW / 2 - 2
-    local driveZ = cz + lotD / 2 - driveLen / 2
-    makePart("Driveway_Concrete", Vector3.new(driveW, 1.25, driveLen), CFrame.new(driveX, cy + 0.65, driveZ), colDriveway, Enum.Material.Concrete, true)
+    local driveLen = lotD * 0.62
+    local driveX = lotW / 2 - driveW / 2 - 2
+    local driveZ = lotD / 2 - driveLen / 2
+    makePart("Driveway_Concrete", Vector3.new(driveW, 1.25, driveLen), CFrame.new(driveX, 0.65, driveZ), colDriveway, Enum.Material.Concrete, true)
 
-    -- Cimentación elevada de la vivienda (+1.2 studs para evitar humedades e inundaciones)
+    -- Cimentación elevada de la vivienda
     local fH = 1.6
-    local houseBaseY = cy + 1.2
-    local houseZ = cz - 2 -- Ligeramente desplazada hacia atrás dejando jardín delantero
-    local houseX = cx - (lotW - hW) * 0.15
+    local houseBaseY = 1.2
+    local houseZ = -2
+    local houseX = - (lotW - hW) * 0.15
 
     makePart("House_Foundation", Vector3.new(hW + 1.2, fH, hD + 1.2),
         CFrame.new(houseX, houseBaseY + fH / 2, houseZ), colFoundation, Enum.Material.Concrete, true)
@@ -243,89 +250,143 @@ local function buildRealisticHouse()
     makePart("House_Body", Vector3.new(hW, wallH, hD),
         CFrame.new(houseX, houseBodyY, houseZ), colWall, matWall, true)
 
-    -- Rodapié perimetral inferior decorativo
+    -- Moldura perimetral inferior decorativa
     makePart("House_Baseboard", Vector3.new(hW + 0.6, 0.8, hD + 0.6),
         CFrame.new(houseX, houseBaseY + fH + 0.4, houseZ), colTrim, Enum.Material.WoodPlanks, false, true)
 
-    -- 3. TEJADO A DOS AGUAS CON ALEROS VOLADOS Y CHIMENEA (Gable Roof)
+    -- Moldura intermedia si es de 2 plantas
+    if isTwoStory then
+        makePart("House_MidBelt", Vector3.new(hW + 0.8, 0.6, hD + 0.8),
+            CFrame.new(houseX, houseBaseY + fH + 9.5, houseZ), colTrim, Enum.Material.WoodPlanks, false, true)
+    end
+
+    -- 3. TEJADO Y REMATES SUPERIORES SEGÚN EL ESTILO
     local roofBaseY = houseBaseY + fH + wallH
-    local eaveHang = 1.6 -- Vuelo del alero más allá de las paredes
+    local eaveHang = 1.6
     local halfHW = (hW + eaveHang * 2) / 2
     local roofTotalD = hD + eaveHang * 2
 
-    -- Falda izquierda del tejado (Wedge inclinada)
-    local leftSlopeCF = CFrame.new(houseX - halfHW / 2, roofBaseY + roofH / 2, houseZ)
-        * CFrame.Angles(0, math.rad(-90), 0)
-    makeWedge("Roof_Slope_Left", Vector3.new(roofTotalD, roofH, halfHW), leftSlopeCF, colRoof, matRoof)
+    if roofType == "flat_terrace" then
+        -- Cubierta plana moderna con parapeto y albardilla
+        makePart("Roof_Slab", Vector3.new(hW + 0.8, 1.2, hD + 0.8), CFrame.new(houseX, roofBaseY + 0.6, houseZ), colRoof, matRoof, true)
+        local paraH = 2.6
+        local paraThick = 0.8
+        makePart("Parapet_F", Vector3.new(hW + 1.0, paraH, paraThick), CFrame.new(houseX, roofBaseY + 1.2 + paraH / 2, houseZ + hD / 2 - paraThick / 2), colTrim, matWall, true)
+        makePart("Parapet_B", Vector3.new(hW + 1.0, paraH, paraThick), CFrame.new(houseX, roofBaseY + 1.2 + paraH / 2, houseZ - hD / 2 + paraThick / 2), colTrim, matWall, true)
+        makePart("Parapet_L", Vector3.new(paraThick, paraH, hD - paraThick * 2), CFrame.new(houseX - hW / 2 + paraThick / 2, roofBaseY + 1.2 + paraH / 2, houseZ), colTrim, matWall, true)
+        makePart("Parapet_R", Vector3.new(paraThick, paraH, hD - paraThick * 2), CFrame.new(houseX + hW / 2 - paraThick / 2, roofBaseY + 1.2 + paraH / 2, houseZ), colTrim, matWall, true)
 
-    -- Falda derecha del tejado (Wedge inclinada simétrica)
-    local rightSlopeCF = CFrame.new(houseX + halfHW / 2, roofBaseY + roofH / 2, houseZ)
-        * CFrame.Angles(0, math.rad(90), 0)
-    makeWedge("Roof_Slope_Right", Vector3.new(roofTotalD, roofH, halfHW), rightSlopeCF, colRoof, matRoof)
+    elseif roofType == "hip" then
+        -- Tejado a 4 aguas (Hip Roof)
+        local hipH = roofH
+        local halfD = (hD + eaveHang * 2) / 2
+        -- Falda izquierda y derecha
+        makeWedge("Roof_Hip_L", Vector3.new(roofTotalD, hipH, halfHW),
+            CFrame.new(houseX - halfHW / 2, roofBaseY + hipH / 2, houseZ) * CFrame.Angles(0, math.rad(-90), 0), colRoof, matRoof)
+        makeWedge("Roof_Hip_R", Vector3.new(roofTotalD, hipH, halfHW),
+            CFrame.new(houseX + halfHW / 2, roofBaseY + hipH / 2, houseZ) * CFrame.Angles(0, math.rad(90), 0), colRoof, matRoof)
+        -- Falda frontal y trasera
+        makeWedge("Roof_Hip_F", Vector3.new(hW + eaveHang * 2, hipH, halfD),
+            CFrame.new(houseX, roofBaseY + hipH / 2, houseZ + halfD / 2), colRoof, matRoof)
+        makeWedge("Roof_Hip_B", Vector3.new(hW + eaveHang * 2, hipH, halfD),
+            CFrame.new(houseX, roofBaseY + hipH / 2, houseZ - halfD / 2) * CFrame.Angles(0, math.rad(180), 0), colRoof, matRoof)
 
-    -- Tabiques triangulares del piñón/hastial frontal y trasero
-    local gableThick = 0.6
-    makePart("Gable_Wall_Front", Vector3.new(hW, roofH * 0.8, gableThick),
-        CFrame.new(houseX, roofBaseY + (roofH * 0.8) / 2, houseZ + hD / 2), colWall, matWall, true)
-    makePart("Gable_Wall_Back", Vector3.new(hW, roofH * 0.8, gableThick),
-        CFrame.new(houseX, roofBaseY + (roofH * 0.8) / 2, houseZ - hD / 2), colWall, matWall, true)
+    else
+        -- TEJADO A DOS AGUAS (GABLE ROOF) CON HASTIALES TRIANGULARES PERFECTOS
+        -- Faldas izquierda y derecha
+        local leftSlopeCF = CFrame.new(houseX - halfHW / 2, roofBaseY + roofH / 2, houseZ)
+            * CFrame.Angles(0, math.rad(-90), 0)
+        makeWedge("Roof_Slope_Left", Vector3.new(roofTotalD, roofH, halfHW), leftSlopeCF, colRoof, matRoof)
 
-    -- Ventana redonda o de buhardilla en el hastial superior
-    local atticWinCF = CFrame.new(houseX, roofBaseY + roofH * 0.5, houseZ + hD / 2 + 0.3) * CFrame.Angles(0, 0, math.rad(90))
-    local atticWin = makeCylinder("Attic_Window", Vector3.new(2.4, 0.2, 2.4), atticWinCF, Color3.fromRGB(200, 220, 240), Enum.Material.Glass, false)
-    atticWin.Transparency = 0.35
+        local rightSlopeCF = CFrame.new(houseX + halfHW / 2, roofBaseY + roofH / 2, houseZ)
+            * CFrame.Angles(0, math.rad(90), 0)
+        makeWedge("Roof_Slope_Right", Vector3.new(roofTotalD, roofH, halfHW), rightSlopeCF, colRoof, matRoof)
 
-    -- Chimenea de ladrillo con remate de piedra
-    local chimW = 2.8
-    local chimD = 2.8
-    local chimH = roofH + 4.5
-    local chimX = houseX + hW / 4
-    local chimZ = houseZ - hD / 4
-    makePart("Chimney_Body", Vector3.new(chimW, chimH, chimD),
-        CFrame.new(chimX, roofBaseY + chimH / 2, chimZ), Color3.fromRGB(145, 60, 42), Enum.Material.Brick, true)
-    -- Sombrerete de la chimenea
-    makePart("Chimney_Cap", Vector3.new(chimW + 0.8, 0.6, chimD + 0.8),
-        CFrame.new(chimX, roofBaseY + chimH + 0.3, chimZ), Color3.fromRGB(80, 82, 88), Enum.Material.Concrete, true)
+        -- Cumbrera superior (Ridge Cap)
+        makePart("Roof_Ridge_Cap", Vector3.new(0.8, 0.4, roofTotalD),
+            CFrame.new(houseX, roofBaseY + roofH + 0.1, houseZ), colTrim, Enum.Material.WoodPlanks, false, true)
+
+        -- HASTIALES / PIÑONES TRIANGULARES EXACTOS (Evita que el cuadrado inferior sobresalga)
+        -- Cada hastial se forma con 2 WedgeParts que siguen la inclinación exacta de la cubierta
+        local gableThick = 0.5
+        local halfW = hW / 2
+
+        -- Hastial Frontal (+Z): mitades izquierda y derecha
+        local fGableL_CF = CFrame.new(houseX - halfW / 2, roofBaseY + roofH / 2, houseZ + hD / 2)
+            * CFrame.Angles(0, math.rad(-90), 0)
+        makeWedge("Gable_Tri_FL", Vector3.new(gableThick, roofH, halfW), fGableL_CF, colWall, matWall)
+
+        local fGableR_CF = CFrame.new(houseX + halfW / 2, roofBaseY + roofH / 2, houseZ + hD / 2)
+            * CFrame.Angles(0, math.rad(90), 0)
+        makeWedge("Gable_Tri_FR", Vector3.new(gableThick, roofH, halfW), fGableR_CF, colWall, matWall)
+
+        -- Hastial Trasero (-Z): mitades izquierda y derecha
+        local bGableL_CF = CFrame.new(houseX - halfW / 2, roofBaseY + roofH / 2, houseZ - hD / 2)
+            * CFrame.Angles(0, math.rad(-90), 0)
+        makeWedge("Gable_Tri_BL", Vector3.new(gableThick, roofH, halfW), bGableL_CF, colWall, matWall)
+
+        local bGableR_CF = CFrame.new(houseX + halfW / 2, roofBaseY + roofH / 2, houseZ - hD / 2)
+            * CFrame.Angles(0, math.rad(90), 0)
+        makeWedge("Gable_Tri_BR", Vector3.new(gableThick, roofH, halfW), bGableR_CF, colWall, matWall)
+
+        -- Ventana redonda u óculo en el hastial frontal con orientación cilíndrica correcta
+        local atticWinCF = CFrame.new(houseX, roofBaseY + roofH * 0.45, houseZ + hD / 2 + 0.3) * CFrame.Angles(0, math.rad(90), 0)
+        -- Marco exterior circular
+        makeCylinder("Attic_Window_Frame", Vector3.new(0.35, 3.2, 3.2), atticWinCF, colTrim, Enum.Material.WoodPlanks, false)
+        -- Cristal interior
+        local atticWin = makeCylinder("Attic_Window_Glass", Vector3.new(0.4, 2.6, 2.6), atticWinCF * CFrame.new(-0.05, 0, 0), Color3.fromRGB(200, 225, 245), Enum.Material.Glass, false)
+        atticWin.Transparency = 0.35
+
+        -- Chimenea de ladrillo con remate de piedra
+        local chimW = 2.8
+        local chimD = 2.8
+        local chimH = roofH + 4.5
+        local chimX = houseX - hW / 3
+        local chimZ = houseZ - hD / 4
+        makePart("Chimney_Body", Vector3.new(chimW, chimH, chimD),
+            CFrame.new(chimX, roofBaseY + chimH / 2, chimZ), Color3.fromRGB(145, 60, 42), Enum.Material.Brick, true)
+        makePart("Chimney_Cap", Vector3.new(chimW + 0.8, 0.6, chimD + 0.8),
+            CFrame.new(chimX, roofBaseY + chimH + 0.3, chimZ), Color3.fromRGB(80, 82, 88), Enum.Material.Concrete, true)
+    end
 
     ${
       hasPorch
         ? `
     -- 4. PORCHE DELANTERO CUBIERTO (Front Porch con barandillas y columnas)
-    local porchW = 16
-    local porchD = 7.5
+    local porchW = math.min(16, hW - 10)
+    local porchD = 7.0
     local porchH = 8.5
     local porchDeckH = fH
-    local porchX = houseX - hW / 2 + porchW / 2 + 2
+    local porchX = houseX - hW / 2 + porchW / 2 + 1.8
     local porchZ = houseZ + hD / 2 + porchD / 2
 
     -- Plataforma/Suelo de madera del porche
     makePart("Porch_Deck", Vector3.new(porchW, porchDeckH, porchD),
         CFrame.new(porchX, houseBaseY + porchDeckH / 2, porchZ), Color3.fromRGB(115, 85, 60), Enum.Material.WoodPlanks, true)
 
-    -- Escalones de acceso al porche (2 peldaños)
+    -- Escalones de acceso al porche que descienden hacia el jardín (+Z)
     local stepW = 5.5
     makePart("Porch_Step_1", Vector3.new(stepW, 0.8, 2.0),
-        CFrame.new(porchX, cy + 1.2 + 0.4, porchZ + porchD / 2 + 1.0), Color3.fromRGB(120, 90, 65), Enum.Material.WoodPlanks, true)
+        CFrame.new(porchX, houseBaseY + 0.4, porchZ + porchD / 2 + 1.0), Color3.fromRGB(120, 90, 65), Enum.Material.WoodPlanks, true)
     makePart("Porch_Step_2", Vector3.new(stepW, 0.4, 2.0),
-        CFrame.new(porchX, cy + 1.2 + 0.2, porchZ + porchD / 2 + 3.0), Color3.fromRGB(120, 90, 65), Enum.Material.WoodPlanks, true)
+        CFrame.new(porchX, houseBaseY + 0.2, porchZ + porchD / 2 + 2.8), Color3.fromRGB(120, 90, 65), Enum.Material.WoodPlanks, true)
 
     -- Columnas de madera que sostienen el tejadillo del porche
     local colSize = Vector3.new(0.8, porchH, 0.8)
-    local pPost1 = makePart("Porch_Post_1", colSize, CFrame.new(porchX - porchW / 2 + 0.6, houseBaseY + porchDeckH + porchH / 2, porchZ + porchD / 2 - 0.6), colTrim, Enum.Material.WoodPlanks, true)
-    local pPost2 = makePart("Porch_Post_2", colSize, CFrame.new(porchX + porchW / 2 - 0.6, houseBaseY + porchDeckH + porchH / 2, porchZ + porchD / 2 - 0.6), colTrim, Enum.Material.WoodPlanks, true)
+    makePart("Porch_Post_1", colSize, CFrame.new(porchX - porchW / 2 + 0.6, houseBaseY + porchDeckH + porchH / 2, porchZ + porchD / 2 - 0.6), colTrim, Enum.Material.WoodPlanks, true)
+    makePart("Porch_Post_2", colSize, CFrame.new(porchX + porchW / 2 - 0.6, houseBaseY + porchDeckH + porchH / 2, porchZ + porchD / 2 - 0.6), colTrim, Enum.Material.WoodPlanks, true)
 
-    -- Tejadillo a un agua sobre el porche
+    -- TEJADILLO A UN AGUA SOBRE EL PORCHE (Orientación corregida: vierte hacia el jardín frontal +Z)
     local pRoofCF = CFrame.new(porchX, houseBaseY + porchDeckH + porchH + 1.2, porchZ)
-        * CFrame.Angles(0, math.rad(180), 0)
-    makeWedge("Porch_Roof", Vector3.new(porchW + 1.2, 2.4, porchD + 1.2), pRoofCF, colRoof, matRoof)
+    makeWedge("Porch_Roof", Vector3.new(porchW + 1.2, 2.4, porchD + 0.8), pRoofCF, colRoof, matRoof)
 
     -- Barandillas de madera perimetrales del porche
     local railH = 3.0
     makePart("Porch_Rail_L", Vector3.new(0.3, railH, porchD - 1.2),
         CFrame.new(porchX - porchW / 2 + 0.4, houseBaseY + porchDeckH + railH / 2, porchZ), colTrim, Enum.Material.WoodPlanks, true)
-    makePart("Porch_Rail_F1", Vector3.new((porchW - stepW) / 2, railH, 0.3),
+    makePart("Porch_Rail_F1", Vector3.new((porchW - stepW) / 2 - 0.2, railH, 0.3),
         CFrame.new(porchX - porchW / 4 - stepW / 4, houseBaseY + porchDeckH + railH / 2, porchZ + porchD / 2 - 0.4), colTrim, Enum.Material.WoodPlanks, true)
-    makePart("Porch_Rail_F2", Vector3.new((porchW - stepW) / 2, railH, 0.3),
+    makePart("Porch_Rail_F2", Vector3.new((porchW - stepW) / 2 - 0.2, railH, 0.3),
         CFrame.new(porchX + porchW / 4 + stepW / 4, houseBaseY + porchDeckH + railH / 2, porchZ + porchD / 2 - 0.4), colTrim, Enum.Material.WoodPlanks, true)
 
     -- Farol colgante cálido sobre el porche
@@ -339,30 +400,26 @@ local function buildRealisticHouse()
 
     -- PUERTA PRINCIPAL RESIDENCIAL CON MOLDURAS Y MANILLA
     local doorCF = CFrame.new(porchX, houseBaseY + porchDeckH + 4.2, houseZ + hD / 2 + 0.15)
-    -- Marco
     makePart("Door_Frame", Vector3.new(4.2, 8.4, 0.4), doorCF, colTrim, Enum.Material.WoodPlanks, true)
-    -- Hoja
     makePart("Door_Leaf", Vector3.new(3.6, 7.8, 0.3), doorCF * CFrame.new(0, -0.2, 0.1), colDoor, Enum.Material.WoodPlanks, true)
-    -- Pomo de latón
     makePart("Door_Knob", Vector3.new(0.2, 0.2, 0.3), doorCF * CFrame.new(1.3, -0.2, 0.3), Color3.fromRGB(220, 185, 75), Enum.Material.Metal, false, true)
-    -- Felpudo de bienvenida "WELCOME"
     makePart("Welcome_Mat", Vector3.new(3.2, 0.08, 1.8),
         CFrame.new(porchX, houseBaseY + porchDeckH + 0.05, houseZ + hD / 2 + 1.6), Color3.fromRGB(85, 60, 40), Enum.Material.Fabric, false, true)
     `
         : ""
     }
 
-    -- 5. VENTANAS RESIDENCIALES CON CONTRAVENTANAS (SHUTTERS) Y ALFÉIZARES
-    local function spawnHouseWindow(winName, cf, hasShutters)
-        local wW, wH = 3.6, 5.0
-        -- Marco exterior blanco
-        makePart(winName .. "_Frame", Vector3.new(wW + 0.6, wH + 0.6, 0.3), cf, colTrim, Enum.Material.WoodPlanks, false, true)
-        -- Cristal con reflectancia y luz cálida interior
-        local glass = makePart(winName .. "_Glass", Vector3.new(wW, wH, 0.2), cf * CFrame.new(0, 0, 0.05), Color3.fromRGB(215, 230, 245), Enum.Material.Glass, false, true)
+    -- 5. VENTANAS RESIDENCIALES 3D SIN SOLAPAMIENTOS
+    local function spawnHouseWindow(winName, relCF, hasShutters)
+        local wW, wH = 3.4, 4.8
+        -- Marco exterior
+        makePart(winName .. "_Frame", Vector3.new(wW + 0.6, wH + 0.6, 0.3), relCF, colTrim, Enum.Material.WoodPlanks, false, true)
+        -- Cristal
+        local glass = makePart(winName .. "_Glass", Vector3.new(wW, wH, 0.2), relCF * CFrame.new(0, 0, 0.05), Color3.fromRGB(215, 230, 245), Enum.Material.Glass, false, true)
         glass.Transparency = 0.35
         glass.Reflectance = 0.3
 
-        local isLit = (cf.X * 13 + cf.Z * 17) % 100 < 55
+        local isLit = ((relCF.X * 13 + relCF.Z * 17) % 100) < 55
         if isLit then
             glass.Material = Enum.Material.Neon
             glass.Color = Color3.fromRGB(255, 232, 175)
@@ -374,28 +431,62 @@ local function buildRealisticHouse()
         end
 
         -- Alféizar inferior
-        makePart(winName .. "_Sill", Vector3.new(wW + 1.0, 0.3, 0.6), cf * CFrame.new(0, -wH / 2 - 0.2, 0.2), colTrim, Enum.Material.WoodPlanks, false, true)
+        makePart(winName .. "_Sill", Vector3.new(wW + 0.8, 0.3, 0.5), relCF * CFrame.new(0, -wH / 2 - 0.2, 0.15), colTrim, Enum.Material.WoodPlanks, false, true)
 
-        -- Contraventanas laterales de madera (Shutters)
+        -- Contraventanas laterales (Shutters) colocadas fuera del marco sin superposición
         if hasShutters then
-            local shutW = 1.2
-            makePart(winName .. "_Shutter_L", Vector3.new(shutW, wH, 0.2), cf * CFrame.new(-wW / 2 - shutW / 2 - 0.2, 0, 0.1), colShutter, Enum.Material.WoodPlanks, false, true)
-            makePart(winName .. "_Shutter_R", Vector3.new(shutW, wH, 0.2), cf * CFrame.new(wW / 2 + shutW / 2 + 0.2, 0, 0.1), colShutter, Enum.Material.WoodPlanks, false, true)
+            local shutW = 1.1
+            local shutOffset = wW / 2 + shutW / 2 + 0.2
+            makePart(winName .. "_Shutter_L", Vector3.new(shutW, wH, 0.2), relCF * CFrame.new(-shutOffset, 0, 0.08), colShutter, Enum.Material.WoodPlanks, false, true)
+            makePart(winName .. "_Shutter_R", Vector3.new(shutW, wH, 0.2), relCF * CFrame.new(shutOffset, 0, 0.08), colShutter, Enum.Material.WoodPlanks, false, true)
         end
     end
 
-    -- Ventanas en la fachada frontal (+Z)
-    local frontWinY = houseBaseY + fH + 5.0
-    spawnHouseWindow("Win_Front_1", CFrame.new(houseX + hW / 2 - 4.5, frontWinY, houseZ + hD / 2 + 0.1), true)
+    -- Altura de ventanas planta baja
+    local frontWinY = houseBaseY + fH + 4.8
+    -- Ventana frontal (+Z): calculada con margen de seguridad del porche
+    ${
+      hasPorch
+        ? `
+    local porchRightX = porchX + porchW / 2
+    local frontWinX = math.max(porchRightX + 3.2, houseX + hW / 2 - 4.5)
+    if frontWinX + 2.8 <= houseX + hW / 2 then
+        spawnHouseWindow("Win_Front_1", CFrame.new(frontWinX, frontWinY, houseZ + hD / 2 + 0.1), true)
+    end
+    `
+        : `
+    spawnHouseWindow("Win_Front_1", CFrame.new(houseX + hW / 4, frontWinY, houseZ + hD / 2 + 0.1), true)
+    spawnHouseWindow("Win_Front_2", CFrame.new(houseX - hW / 4, frontWinY, houseZ + hD / 2 + 0.1), true)
+    `
+    }
 
-    -- Ventanas laterales (Izquierda -X y Derecha +X)
-    spawnHouseWindow("Win_Left_1", CFrame.new(houseX - hW / 2 - 0.1, frontWinY, houseZ - 4) * CFrame.Angles(0, math.rad(-90), 0), true)
-    spawnHouseWindow("Win_Left_2", CFrame.new(houseX - hW / 2 - 0.1, frontWinY, houseZ + 6) * CFrame.Angles(0, math.rad(-90), 0), true)
-    spawnHouseWindow("Win_Right_1", CFrame.new(houseX + hW / 2 + 0.1, frontWinY, houseZ) * CFrame.Angles(0, math.rad(90), 0), false)
+    -- Ventanas laterales izquierdas (-X)
+    spawnHouseWindow("Win_Left_1", CFrame.new(houseX - hW / 2 - 0.1, frontWinY, houseZ - 5) * CFrame.Angles(0, math.rad(-90), 0), true)
+    spawnHouseWindow("Win_Left_2", CFrame.new(houseX - hW / 2 - 0.1, frontWinY, houseZ + 5) * CFrame.Angles(0, math.rad(-90), 0), true)
+
+    -- Ventana lateral derecha (+X): omitida si hay garaje para evitar solapamientos con la pared del garaje
+    ${
+      !hasGarage
+        ? `
+    spawnHouseWindow("Win_Right_1", CFrame.new(houseX + hW / 2 + 0.1, frontWinY, houseZ) * CFrame.Angles(0, math.rad(90), 0), true)
+    `
+        : ""
+    }
 
     -- Ventanas traseras (-Z)
-    spawnHouseWindow("Win_Back_1", CFrame.new(houseX - 6, frontWinY, houseZ - hD / 2 - 0.1) * CFrame.Angles(0, math.rad(180), 0), true)
-    spawnHouseWindow("Win_Back_2", CFrame.new(houseX + 6, frontWinY, houseZ - hD / 2 - 0.1) * CFrame.Angles(0, math.rad(180), 0), true)
+    local backWinOffset = math.min(6.5, hW / 4)
+    spawnHouseWindow("Win_Back_1", CFrame.new(houseX - backWinOffset, frontWinY, houseZ - hD / 2 - 0.1) * CFrame.Angles(0, math.rad(180), 0), true)
+    spawnHouseWindow("Win_Back_2", CFrame.new(houseX + backWinOffset, frontWinY, houseZ - hD / 2 - 0.1) * CFrame.Angles(0, math.rad(180), 0), true)
+
+    -- Ventanas de la segunda planta si es de 2 pisos
+    if isTwoStory then
+        local upperWinY = houseBaseY + fH + 14.0
+        spawnHouseWindow("Win_Front_Fl2_1", CFrame.new(houseX - hW / 4, upperWinY, houseZ + hD / 2 + 0.1), true)
+        spawnHouseWindow("Win_Front_Fl2_2", CFrame.new(houseX + hW / 4, upperWinY, houseZ + hD / 2 + 0.1), true)
+        spawnHouseWindow("Win_Left_Fl2", CFrame.new(houseX - hW / 2 - 0.1, upperWinY, houseZ) * CFrame.Angles(0, math.rad(-90), 0), true)
+        spawnHouseWindow("Win_Back_Fl2_1", CFrame.new(houseX - backWinOffset, upperWinY, houseZ - hD / 2 - 0.1) * CFrame.Angles(0, math.rad(180), 0), true)
+        spawnHouseWindow("Win_Back_Fl2_2", CFrame.new(houseX + backWinOffset, upperWinY, houseZ - hD / 2 - 0.1) * CFrame.Angles(0, math.rad(180), 0), true)
+    end
 
     ${
       hasGarage
@@ -411,13 +502,22 @@ local function buildRealisticHouse()
     makePart("Garage_Body", Vector3.new(garW, garH, garD),
         CFrame.new(garX, houseBaseY + garH / 2, garZ), colWall, matWall, true)
 
-    -- Tejadillo del garaje a dos aguas
-    local gRoofCF_L = CFrame.new(garX - garW / 4, houseBaseY + garH + 1.8, garZ) * CFrame.Angles(0, math.rad(-90), 0)
-    makeWedge("Garage_Roof_L", Vector3.new(garD + 1.2, 3.6, garW / 2 + 0.6), gRoofCF_L, colRoof, matRoof)
-    local gRoofCF_R = CFrame.new(garX + garW / 4, houseBaseY + garH + 1.8, garZ) * CFrame.Angles(0, math.rad(90), 0)
-    makeWedge("Garage_Roof_R", Vector3.new(garD + 1.2, 3.6, garW / 2 + 0.6), gRoofCF_R, colRoof, matRoof)
+    -- Tejadillo del garaje a dos aguas con hastial frontal recortado
+    local gRoofH = 3.6
+    local gRoofBaseY = houseBaseY + garH
+    local gRoofCF_L = CFrame.new(garX - garW / 4, gRoofBaseY + gRoofH / 2, garZ) * CFrame.Angles(0, math.rad(-90), 0)
+    makeWedge("Garage_Roof_L", Vector3.new(garD + 1.2, gRoofH, garW / 2 + 0.6), gRoofCF_L, colRoof, matRoof)
 
-    -- Portón de garaje seccional (blanco con ranuras)
+    local gRoofCF_R = CFrame.new(garX + garW / 4, gRoofBaseY + gRoofH / 2, garZ) * CFrame.Angles(0, math.rad(90), 0)
+    makeWedge("Garage_Roof_R", Vector3.new(garD + 1.2, gRoofH, garW / 2 + 0.6), gRoofCF_R, colRoof, matRoof)
+
+    -- Hastial triangular frontal del garaje
+    local gGableL_CF = CFrame.new(garX - garW / 4, gRoofBaseY + gRoofH / 2, garZ + garD / 2) * CFrame.Angles(0, math.rad(-90), 0)
+    makeWedge("Garage_Gable_L", Vector3.new(0.4, gRoofH, garW / 2), gGableL_CF, colWall, matWall)
+    local gGableR_CF = CFrame.new(garX + garW / 4, gRoofBaseY + gRoofH / 2, garZ + garD / 2) * CFrame.Angles(0, math.rad(90), 0)
+    makeWedge("Garage_Gable_R", Vector3.new(0.4, gRoofH, garW / 2), gGableR_CF, colWall, matWall)
+
+    -- Portón de garaje seccional
     local gDoorW = 10.5
     local gDoorH = 7.8
     local gDoorZ = garZ + garD / 2 + 0.1
@@ -442,38 +542,39 @@ local function buildRealisticHouse()
         ? `
     -- 7. ELEMENTOS DE ATREZZO RESIDENCIAL Y PAISAJISMO
     -- Camino de losas de piedra desde la acera hasta los escalones del porche
-    local pathZStart = cz + lotD / 2
-    local pathZEnd = houseZ + hD / 2 + 7.5
+    local pathZStart = lotD / 2
+    local pathZEnd = houseZ + hD / 2 + 7.0
     local pathLen = pathZStart - pathZEnd
-    makePart("Garden_Stone_Path", Vector3.new(4.2, 0.1, pathLen),
-        CFrame.new(houseX - hW / 2 + 10, cy + 1.2 + 0.05, (pathZStart + pathZEnd) / 2), Color3.fromRGB(180, 175, 165), Enum.Material.Cobblestone, true)
+    if pathLen > 2 then
+        makePart("Garden_Stone_Path", Vector3.new(4.2, 0.1, pathLen),
+            CFrame.new(houseX - hW / 2 + 10, houseBaseY + 0.05, (pathZStart + pathZEnd) / 2), Color3.fromRGB(180, 175, 165), Enum.Material.Cobblestone, true)
+    end
 
     -- Buzón clásico americano (Mailbox) junto a la entrada de vehículos a pie de acera
     local mbX = driveX - driveW / 2 - 2.5
-    local mbZ = cz + lotD / 2 - 4
-    local mbPost = makePart("Mailbox_Post", Vector3.new(0.4, 4.0, 0.4),
-        CFrame.new(mbX, cy + 1.2 + 2.0, mbZ), Color3.fromRGB(90, 65, 45), Enum.Material.WoodPlanks, true)
-    local mbBox = makePart("Mailbox_Box", Vector3.new(1.0, 1.0, 1.8),
-        CFrame.new(mbX, cy + 1.2 + 4.2, mbZ), Color3.fromRGB(45, 75, 135), Enum.Material.Metal, true)
-    local mbFlag = makePart("Mailbox_Flag", Vector3.new(0.1, 0.6, 0.4),
-        CFrame.new(mbX + 0.55, cy + 1.2 + 4.4, mbZ - 0.4), Color3.fromRGB(220, 45, 40), Enum.Material.SmoothPlastic, false, true)
+    local mbZ = lotD / 2 - 4
+    makePart("Mailbox_Post", Vector3.new(0.4, 4.0, 0.4),
+        CFrame.new(mbX, houseBaseY + 2.0, mbZ), Color3.fromRGB(90, 65, 45), Enum.Material.WoodPlanks, true)
+    makePart("Mailbox_Box", Vector3.new(1.0, 1.0, 1.8),
+        CFrame.new(mbX, houseBaseY + 4.2, mbZ), Color3.fromRGB(45, 75, 135), Enum.Material.Metal, true)
+    makePart("Mailbox_Flag", Vector3.new(0.1, 0.6, 0.4),
+        CFrame.new(mbX + 0.55, houseBaseY + 4.4, mbZ - 0.4), Color3.fromRGB(220, 45, 40), Enum.Material.SmoothPlastic, false, true)
 
-    -- Setos podados bajo las ventanas delanteras
-    makePart("Garden_Hedge_1", Vector3.new(8, 2.2, 1.8),
-        CFrame.new(houseX + hW / 2 - 5, cy + 1.2 + 1.1, houseZ + hD / 2 + 1.5), Color3.fromRGB(48, 115, 42), Enum.Material.Grass, false)
+    -- Setos podados bajo la ventana delantera
+    makePart("Garden_Hedge_1", Vector3.new(7, 2.2, 1.8),
+        CFrame.new(houseX + hW / 2 - 4.5, houseBaseY + 1.1, houseZ + hD / 2 + 1.5), Color3.fromRGB(48, 115, 42), Enum.Material.Grass, false)
 
     -- Patio trasero: Barbacoa grill y cubos de basura rodantes
-    local backYardZ = cz - lotD / 2 + 6
-    -- Barbacoa de carbón
-    local bbqCF = CFrame.new(houseX - 6, cy + 1.2 + 1.8, backYardZ) * CFrame.Angles(0, 0, math.rad(90))
-    local bbqDrum = makeCylinder("BBQ_Grill", Vector3.new(2.4, 3.2, 2.4), bbqCF, Color3.fromRGB(35, 38, 42), Enum.Material.Metal, true)
-    makePart("BBQ_Leg_1", Vector3.new(0.2, 1.8, 0.2), CFrame.new(houseX - 7.2, cy + 1.2 + 0.9, backYardZ), Color3.fromRGB(35, 38, 42), Enum.Material.Metal, false, true)
-    makePart("BBQ_Leg_2", Vector3.new(0.2, 1.8, 0.2), CFrame.new(houseX - 4.8, cy + 1.2 + 0.9, backYardZ), Color3.fromRGB(35, 38, 42), Enum.Material.Metal, false, true)
+    local backYardZ = -lotD / 2 + 6
+    local bbqCF = CFrame.new(houseX - 6, houseBaseY + 1.8, backYardZ) * CFrame.Angles(0, 0, math.rad(90))
+    makeCylinder("BBQ_Grill", Vector3.new(2.4, 3.2, 2.4), bbqCF, Color3.fromRGB(35, 38, 42), Enum.Material.Metal, true)
+    makePart("BBQ_Leg_1", Vector3.new(0.2, 1.8, 0.2), CFrame.new(houseX - 7.2, houseBaseY + 0.9, backYardZ), Color3.fromRGB(35, 38, 42), Enum.Material.Metal, false, true)
+    makePart("BBQ_Leg_2", Vector3.new(0.2, 1.8, 0.2), CFrame.new(houseX - 4.8, houseBaseY + 0.9, backYardZ), Color3.fromRGB(35, 38, 42), Enum.Material.Metal, false, true)
 
-    -- Cubos de basura rodantes de plástico verde y azul junto al garaje
-    local trashCF1 = CFrame.new(driveX - driveW / 2 + 1.5, cy + 1.2 + 1.6, houseZ)
+    -- Cubos de basura rodantes junto al garaje
+    local trashCF1 = CFrame.new(driveX - driveW / 2 + 1.5, houseBaseY + 1.6, houseZ)
     makePart("Wheelie_Bin_Green", Vector3.new(1.6, 3.2, 1.6), trashCF1, Color3.fromRGB(42, 95, 50), Enum.Material.SmoothPlastic, true)
-    local trashCF2 = CFrame.new(driveX - driveW / 2 + 3.4, cy + 1.2 + 1.6, houseZ)
+    local trashCF2 = CFrame.new(driveX - driveW / 2 + 3.4, houseBaseY + 1.6, houseZ)
     makePart("Wheelie_Bin_Blue", Vector3.new(1.6, 3.2, 1.6), trashCF2, Color3.fromRGB(35, 75, 145), Enum.Material.SmoothPlastic, true)
     `
         : ""
@@ -482,25 +583,25 @@ local function buildRealisticHouse()
     ${
       hasFence
         ? `
-    -- 8. VALLA PERIMETRAL DE MADERA BLANCA (Picket Fence) O METÁLICA
+    -- 8. VALLA PERIMETRAL DE MADERA BLANCA (Picket Fence)
     local fenceH = 3.6
     local colFence = Color3.fromRGB(240, 240, 245)
-    local fenceBaseY = cy + 1.2 + fenceH / 2
+    local fenceBaseY = houseBaseY + fenceH / 2
 
-    -- Valla lateral izquierda (separa de la parcela vecina)
+    -- Valla lateral izquierda
     makePart("Fence_Left", Vector3.new(0.4, fenceH, lotD - 8),
-        CFrame.new(cx - lotW / 2 + 0.4, fenceBaseY, cz - 4), colFence, Enum.Material.WoodPlanks, true)
+        CFrame.new(-lotW / 2 + 0.4, fenceBaseY, -4), colFence, Enum.Material.WoodPlanks, true)
     -- Valla trasera
     makePart("Fence_Back", Vector3.new(lotW - 2, fenceH, 0.4),
-        CFrame.new(cx, fenceBaseY, cz - lotD / 2 + 0.4), colFence, Enum.Material.WoodPlanks, true)
+        CFrame.new(0, fenceBaseY, -lotD / 2 + 0.4), colFence, Enum.Material.WoodPlanks, true)
     -- Valla lateral derecha (hasta el driveway)
     makePart("Fence_Right", Vector3.new(0.4, fenceH, lotD - driveLen - 4),
-        CFrame.new(cx + lotW / 2 - 0.4, fenceBaseY, cz - driveLen / 2), colFence, Enum.Material.WoodPlanks, true)
+        CFrame.new(lotW / 2 - 0.4, fenceBaseY, -driveLen / 2), colFence, Enum.Material.WoodPlanks, true)
     `
         : ""
     }
 
-    print(string.format("[HouseEngine AAA] ✅ Casa '%s' (%s, huella %dx%d) construida en '%s'.", "${name}", "${config.name}", hW, hD, "${parent}"))
+    print(string.format("[HouseEngine AAA] ✅ Casa '%s' (%s, huella %dx%d) construida en '%s' (rot: %d°).", "${name}", "${config.name}", hW, hD, "${parent}", ${rotY}))
 end
 
 buildRealisticHouse()

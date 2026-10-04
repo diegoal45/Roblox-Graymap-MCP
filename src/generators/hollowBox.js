@@ -99,8 +99,8 @@ local function buildHollowBox()
             p.CanQuery = false
             p.CastShadow = false
         end
-        p.TopSurface = Enum.TopSurfaceType.Smooth
-        p.BottomSurface = Enum.BottomSurfaceType.Smooth
+        p.TopSurface = Enum.SurfaceType.Smooth
+        p.BottomSurface = Enum.SurfaceType.Smooth
         p.Size = pSize
         p.CFrame = pCFrame
         p.Color = Color3.fromRGB(colorRgb[1], colorRgb[2], colorRgb[3])
