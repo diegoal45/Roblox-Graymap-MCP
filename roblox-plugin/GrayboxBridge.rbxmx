@@ -12,6 +12,7 @@
 local HttpService = game:GetService("HttpService")
 local ChangeHistoryService = game:GetService("ChangeHistoryService")
 local CollectionService = game:GetService("CollectionService")
+local SelectionService = game:GetService("Selection")
 
 local BRIDGE_URL = "http://127.0.0.1:30250"
 local POLL_INTERVAL = 0.35
@@ -180,13 +181,47 @@ local function createButton(text, bgCol, layoutOrd, onClick)
     return btn
 end
 
+-- Panel de Botones Fila 2 (Herramientas de Nivel y Selección)
+local btnContainer2 = Instance.new("Frame")
+btnContainer2.Name = "Buttons2"
+btnContainer2.Size = UDim2.new(1, 0, 0, 28)
+btnContainer2.BackgroundTransparency = 1
+btnContainer2.LayoutOrder = 4
+btnContainer2.Parent = bg
+
+local btnLayout2 = Instance.new("UIListLayout")
+btnLayout2.FillDirection = Enum.FillDirection.Horizontal
+btnLayout2.SortOrder = Enum.SortOrder.LayoutOrder
+btnLayout2.Padding = UDim.new(0, 8)
+btnLayout2.Parent = btnContainer2
+
+local function createButton2(text, bgCol, layoutOrd, onClick)
+    local btn = Instance.new("TextButton")
+    btn.Text = text
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 11
+    btn.TextColor3 = Color3.fromRGB(240, 240, 245)
+    btn.BackgroundColor3 = bgCol
+    btn.BorderSizePixel = 0
+    btn.Size = UDim2.new(0.31, 0, 1, 0)
+    btn.LayoutOrder = layoutOrd
+    btn.Parent = btnContainer2
+
+    local bCorner = Instance.new("UICorner")
+    bCorner.CornerRadius = UDim.new(0, 6)
+    bCorner.Parent = btn
+
+    btn.MouseButton1Click:Connect(onClick)
+    return btn
+end
+
 -- Terminal de Logs / Historial
 local logFrame = Instance.new("Frame")
 logFrame.Name = "LogFrame"
-logFrame.Size = UDim2.new(1, 0, 1, -170)
+logFrame.Size = UDim2.new(1, 0, 1, -210)
 logFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
 logFrame.BorderSizePixel = 0
-logFrame.LayoutOrder = 4
+logFrame.LayoutOrder = 5
 logFrame.Parent = bg
 
 local logCorner = Instance.new("UICorner")
@@ -227,7 +262,7 @@ local function addLog(msg, color)
     logScroll.CanvasPosition = Vector2.new(0, 999999)
 end
 
--- Funciones de los botones
+-- Funciones de los botones Fila 1
 local pauseBtn
 pauseBtn = createButton("⏸️ Pausar", Color3.fromRGB(55, 55, 65), 1, function()
     isEnabled = not isEnabled
@@ -266,6 +301,46 @@ createButton("🧹 Limpiar", Color3.fromRGB(160, 45, 45), 3, function()
     if c then c:Destroy() count = count + 1 end
     if rec then ChangeHistoryService:FinishRecording(rec, Enum.FinishRecordingOperation.Commit) end
     addLog("🧹 Workspace limpiado (Ctrl+Z disponible)", Color3.fromRGB(240, 140, 50))
+end)
+
+-- Funciones de los botones Fila 2
+createButton2("🎯 Sel Info", Color3.fromRGB(40, 110, 140), 1, function()
+    local sel = SelectionService:Get()
+    if #sel == 0 then
+        addLog("ℹ️ No hay nada seleccionado en Studio", Color3.fromRGB(240, 180, 50))
+    else
+        for _, inst in ipairs(sel) do
+            local pos = inst:IsA("Model") and inst:GetPivot().Position or (inst:IsA("BasePart") and inst.Position or Vector3.zero)
+            addLog(string.format("🎯 [%s] '%s' en (%.1f, %.1f, %.1f)", inst.ClassName, inst.Name, pos.X, pos.Y, pos.Z), Color3.fromRGB(100, 200, 255))
+        end
+    end
+end)
+
+createButton2("⚡ Optimizar", Color3.fromRGB(120, 90, 30), 2, function()
+    local totalP = 0
+    local unanchored = 0
+    for _, inst in ipairs(workspace:GetDescendants()) do
+        if inst:IsA("BasePart") then
+            totalP = totalP + 1
+            if not inst.Anchored then unanchored = unanchored + 1 end
+        end
+    end
+    addLog(string.format("⚡ Total partes: %d | Desancladas: %d", totalP, unanchored), unanchored > 0 and Color3.fromRGB(240, 140, 50) or Color3.fromRGB(60, 220, 100))
+end)
+
+createButton2("👁️ Enfocar", Color3.fromRGB(60, 50, 120), 3, function()
+    local sel = SelectionService:Get()
+    if #sel > 0 then
+        local inst = sel[1]
+        local pos = inst:IsA("Model") and inst:GetPivot().Position or (inst:IsA("BasePart") and inst.Position or Vector3.zero)
+        local cam = workspace.CurrentCamera
+        if cam then
+            cam.CFrame = CFrame.lookAt(pos + Vector3.new(20, 25, 20), pos)
+            addLog("👁️ Cámara enfocada en " .. inst.Name, Color3.fromRGB(160, 140, 255))
+        end
+    else
+        addLog("ℹ️ Selecciona un objeto primero para enfocar", Color3.fromRGB(240, 180, 50))
+    end
 end)
 
 addLog("🟢 Plugin iniciado correctamente.", Color3.fromRGB(80, 220, 120))
@@ -456,16 +531,72 @@ task.spawn(function()
                                 })
                             end)
 
-                        -- Caso B: Construcción (Batch / Luau)
+                        -- Caso A4: Consulta de Selección Actual en Studio (get_selection)
+                        elseif cmd.type == "get_selection" then
+                            local sel = SelectionService:Get()
+                            local items = {}
+                            for _, inst in ipairs(sel) do
+                                local pos, sz
+                                if inst:IsA("Model") then
+                                    local cf, s = inst:GetBoundingBox()
+                                    pos = { math.round(cf.Position.X*10)/10, math.round(cf.Position.Y*10)/10, math.round(cf.Position.Z*10)/10 }
+                                    sz = { math.round(s.X*10)/10, math.round(s.Y*10)/10, math.round(s.Z*10)/10 }
+                                elseif inst:IsA("BasePart") then
+                                    pos = { math.round(inst.Position.X*10)/10, math.round(inst.Position.Y*10)/10, math.round(inst.Position.Z*10)/10 }
+                                    sz = { math.round(inst.Size.X*10)/10, math.round(inst.Size.Y*10)/10, math.round(inst.Size.Z*10)/10 }
+                                end
+                                table.insert(items, {
+                                    name = inst.Name,
+                                    className = inst.ClassName,
+                                    path = inst:GetFullName(),
+                                    position = pos,
+                                    size = sz,
+                                    partCount = inst:IsA("Model") and #inst:GetDescendants() or 1,
+                                    anchored = inst:IsA("BasePart") and inst.Anchored or nil,
+                                    tags = CollectionService:GetTags(inst)
+                                })
+                            end
+                            addLog(string.format("🎯 Selección consultada (%d objetos)", #items), Color3.fromRGB(100, 200, 255))
+                            pcall(function()
+                                HttpService:RequestAsync({
+                                    Url = BRIDGE_URL .. "/response",
+                                    Method = "POST",
+                                    Headers = { ["Content-Type"] = "application/json" },
+                                    Body = HttpService:JSONEncode({ id = cmd.id, success = true, data = { count = #items, items = items } }),
+                                })
+                            end)
+
+                        -- Caso A5: Establecer Selección en Studio (set_selection)
+                        elseif cmd.type == "set_selection" then
+                            local targets = cmd.target_paths or (cmd.target_path and { cmd.target_path } or {})
+                            local toSelect = {}
+                            for _, pStr in ipairs(targets) do
+                                local found = resolvePath(pStr)
+                                if found then table.insert(toSelect, found) end
+                            end
+                            SelectionService:Set(toSelect)
+                            addLog(string.format("🎯 Selección establecida (%d objetos)", #toSelect), Color3.fromRGB(100, 200, 255))
+                            pcall(function()
+                                HttpService:RequestAsync({
+                                    Url = BRIDGE_URL .. "/response",
+                                    Method = "POST",
+                                    Headers = { ["Content-Type"] = "application/json" },
+                                    Body = HttpService:JSONEncode({ id = cmd.id, success = true, data = { count = #toSelect, selectedCount = #toSelect } }),
+                                })
+                            end)
+
+                        -- Caso B: Ejecución Luau (Acciones o Consultas)
                         elseif cmd.code then
                             local actName = cmd.actionName or "Graybox Action"
-                            addLog("🔨 Ejecutando: " .. actName, Color3.fromRGB(240, 200, 80))
+                            local isQuery = cmd.isQuery == true
+                            addLog("🔨 " .. actName, Color3.fromRGB(240, 200, 80))
 
-                            local rec = ChangeHistoryService:TryBeginRecording(actName)
+                            local rec = not isQuery and ChangeHistoryService:TryBeginRecording(actName) or nil
+                            local returnData = nil
                             local execOk, execErr = pcall(function()
                                 local fn, compileErr = loadstring(cmd.code)
                                 if not fn then error("Error Luau: " .. tostring(compileErr)) end
-                                fn()
+                                returnData = fn()
                             end)
 
                             if rec then
@@ -474,6 +605,12 @@ task.spawn(function()
                                     addLog("✅ Completado: " .. actName, Color3.fromRGB(60, 220, 100))
                                 else
                                     ChangeHistoryService:FinishRecording(rec, Enum.FinishRecordingOperation.Cancel)
+                                    addLog("❌ Error: " .. tostring(execErr), Color3.fromRGB(240, 70, 70))
+                                end
+                            else
+                                if execOk then
+                                    addLog("⚡ Listo: " .. actName, Color3.fromRGB(60, 220, 100))
+                                else
                                     addLog("❌ Error: " .. tostring(execErr), Color3.fromRGB(240, 70, 70))
                                 end
                             end
@@ -486,6 +623,7 @@ task.spawn(function()
                                     Body = HttpService:JSONEncode({
                                         id = cmd.id,
                                         success = execOk,
+                                        data = returnData,
                                         error = execErr and tostring(execErr) or nil,
                                     }),
                                 })
