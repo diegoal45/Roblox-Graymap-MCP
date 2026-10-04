@@ -1,72 +1,83 @@
 /**
- * Motor Cinemático de Iluminación, Atmósfera y Post-Procesado para Roblox Studio.
- * Inyecta Future Lighting, Atmosphere, Bloom, ColorCorrection y SunRays
- * para transformar visualmente el juego a calidad AAA.
+ * Motor Cinemático de Iluminación, Atmósfera y Post-Procesado AAA para Roblox Studio.
+ * Inyecta Future Lighting, ColorShift (sol y sombras rebotadas), Atmosphere volumétrica,
+ * Bloom con umbral afinado para neones, ColorCorrection con contraste cinematográfico y SunRays.
+ * Elimina completamente el aspecto plano y apagado de los mundos.
  */
 
 export const ENVIRONMENT_PRESETS = {
   cyberpunk_night: {
     name: "Cyberpunk Night",
     clockTime: 22.5,
-    brightness: 1.2,
-    ambient: [25, 30, 45],
-    outdoorAmbient: [35, 40, 55],
-    colorShift_Top: [0, 180, 255],
-    atmosphere: { density: 0.35, offset: 0.2, haze: 2.0, color: [30, 40, 60], decay: [15, 20, 35], glare: 0.2 },
-    bloom: { intensity: 1.2, size: 24, threshold: 0.8 },
-    colorCorrection: { contrast: 0.18, saturation: 0.28, tint: [220, 230, 255] },
+    brightness: 1.4,
+    ambient: [30, 36, 52],
+    outdoorAmbient: [42, 48, 65],
+    colorShift_Top: [0, 190, 255],     // Tinte superior cian
+    colorShift_Bottom: [80, 20, 80],   // Tinte de rebote magenta
+    exposureCompensation: 0.2,
+    atmosphere: { density: 0.38, offset: 0.2, haze: 2.2, color: [32, 42, 65], decay: [18, 22, 38], glare: 0.25 },
+    bloom: { intensity: 1.3, size: 24, threshold: 0.8 },
+    colorCorrection: { contrast: 0.22, saturation: 0.32, tint: [225, 235, 255] },
     sunRays: null,
   },
 
   golden_hour: {
-    name: "Golden Hour / Atardecer Cálido",
-    clockTime: 17.4,
-    brightness: 2.2,
-    ambient: [70, 50, 40],
-    outdoorAmbient: [140, 100, 70],
-    colorShift_Top: [255, 180, 100],
-    atmosphere: { density: 0.28, offset: 0.1, haze: 1.5, color: [255, 170, 90], decay: [210, 120, 50], glare: 0.5 },
-    bloom: { intensity: 0.6, size: 18, threshold: 1.0 },
-    colorCorrection: { contrast: 0.10, saturation: 0.18, tint: [255, 235, 210] },
-    sunRays: { intensity: 0.25, spread: 0.8 },
-  },
-
-  overcast_fog: {
-    name: "Overcast Fog / Niebla Industrial",
-    clockTime: 14.0,
-    brightness: 1.6,
-    ambient: [90, 95, 105],
-    outdoorAmbient: [120, 125, 135],
-    colorShift_Top: [180, 185, 195],
-    atmosphere: { density: 0.55, offset: 0.3, haze: 3.5, color: [180, 185, 195], decay: [140, 145, 155], glare: 0.1 },
-    bloom: { intensity: 0.3, size: 12, threshold: 1.2 },
-    colorCorrection: { contrast: -0.05, saturation: -0.20, tint: [240, 240, 245] },
-    sunRays: null,
+    name: "Golden Hour / Atardecer Cinemático AAA",
+    clockTime: 17.5,
+    brightness: 2.5,
+    ambient: [80, 60, 50],
+    outdoorAmbient: [155, 115, 85],
+    colorShift_Top: [255, 185, 110],    // Luz solar dorada intensa
+    colorShift_Bottom: [65, 85, 120],   // Sombras con tinte azul cielo complementario
+    exposureCompensation: 0.1,
+    atmosphere: { density: 0.28, offset: 0.12, haze: 1.6, color: [255, 175, 95], decay: [215, 125, 55], glare: 0.6 },
+    bloom: { intensity: 0.7, size: 20, threshold: 0.95 },
+    colorCorrection: { contrast: 0.14, saturation: 0.22, tint: [255, 240, 220] },
+    sunRays: { intensity: 0.28, spread: 0.85 },
   },
 
   sunny_noon: {
-    name: "Sunny Noon / Mediodía Nítido",
-    clockTime: 12.0,
-    brightness: 2.8,
-    ambient: [80, 85, 95],
+    name: "Sunny Noon / Mediodía Nítido AAA",
+    clockTime: 12.5,
+    brightness: 3.0,
+    ambient: [95, 100, 110],
+    outdoorAmbient: [145, 150, 160],
+    colorShift_Top: [255, 252, 245],    // Luz solar cálida y brillante
+    colorShift_Bottom: [90, 110, 140],  // Sombras con rebote celeste
+    exposureCompensation: 0.05,
+    atmosphere: { density: 0.22, offset: 0.06, haze: 0.6, color: [215, 230, 250], decay: [185, 205, 230], glare: 0.35 },
+    bloom: { intensity: 0.45, size: 16, threshold: 1.3 },
+    colorCorrection: { contrast: 0.10, saturation: 0.12, tint: [255, 255, 255] },
+    sunRays: { intensity: 0.15, spread: 0.65 },
+  },
+
+  overcast_fog: {
+    name: "Overcast Fog / Atmósfera Industrial",
+    clockTime: 14.0,
+    brightness: 1.8,
+    ambient: [100, 105, 115],
     outdoorAmbient: [130, 135, 145],
-    colorShift_Top: [255, 255, 250],
-    atmosphere: { density: 0.20, offset: 0.05, haze: 0.5, color: [210, 225, 245], decay: [180, 200, 225], glare: 0.3 },
-    bloom: { intensity: 0.4, size: 14, threshold: 1.4 },
-    colorCorrection: { contrast: 0.05, saturation: 0.08, tint: [255, 255, 255] },
-    sunRays: { intensity: 0.12, spread: 0.6 },
+    colorShift_Top: [195, 200, 210],
+    colorShift_Bottom: [75, 80, 90],
+    exposureCompensation: 0.0,
+    atmosphere: { density: 0.52, offset: 0.28, haze: 3.2, color: [185, 190, 200], decay: [145, 150, 160], glare: 0.15 },
+    bloom: { intensity: 0.35, size: 14, threshold: 1.1 },
+    colorCorrection: { contrast: 0.08, saturation: -0.10, tint: [242, 244, 248] },
+    sunRays: null,
   },
 
   rainy_noir: {
-    name: "Rainy Noir / Lluvia Urbana",
-    clockTime: 20.0,
-    brightness: 1.0,
-    ambient: [30, 35, 45],
-    outdoorAmbient: [40, 45, 60],
-    colorShift_Top: [120, 140, 180],
-    atmosphere: { density: 0.45, offset: 0.25, haze: 3.0, color: [25, 30, 45], decay: [10, 15, 25], glare: 0.15 },
-    bloom: { intensity: 0.9, size: 20, threshold: 0.9 },
-    colorCorrection: { contrast: 0.22, saturation: -0.10, tint: [195, 215, 235] },
+    name: "Rainy Noir / Urbano Nocturno",
+    clockTime: 20.5,
+    brightness: 1.2,
+    ambient: [35, 40, 50],
+    outdoorAmbient: [48, 55, 70],
+    colorShift_Top: [130, 150, 195],
+    colorShift_Bottom: [40, 45, 55],
+    exposureCompensation: 0.15,
+    atmosphere: { density: 0.46, offset: 0.22, haze: 2.8, color: [28, 35, 50], decay: [12, 18, 28], glare: 0.2 },
+    bloom: { intensity: 1.0, size: 22, threshold: 0.85 },
+    colorCorrection: { contrast: 0.24, saturation: 0.05, tint: [205, 220, 240] },
     sunRays: null,
   },
 };
@@ -75,7 +86,7 @@ export function generateEnvironmentLuau({
   preset = "golden_hour",
   clockTime = null,
   enableFutureLighting = true,
-  shadowSoftness = 0.2,
+  shadowSoftness = 0.18,
 }) {
   const pKey = preset.toLowerCase().replace(/[^a-z0-9_]/g, "_");
   const config = ENVIRONMENT_PRESETS[pKey] || ENVIRONMENT_PRESETS.golden_hour;
@@ -83,6 +94,8 @@ export function generateEnvironmentLuau({
 
   const amb = config.ambient;
   const outAmb = config.outdoorAmbient;
+  const topCol = config.colorShift_Top;
+  const botCol = config.colorShift_Bottom;
   const atmo = config.atmosphere;
   const bloom = config.bloom;
   const cc = config.colorCorrection;
@@ -90,16 +103,19 @@ export function generateEnvironmentLuau({
   return `
 local Lighting = game:GetService("Lighting")
 
--- 1. CONFIGURACIÓN DEL MOTOR DE ILUMINACIÓN
+-- 1. MOTOR DE ILUMINACIÓN FUTURE LIGHTING Y SOMBRAS EN TIEMPO REAL
 ${enableFutureLighting ? `pcall(function() Lighting.Technology = Enum.Technology.Future end)` : ""}
 Lighting.GlobalShadows = true
 Lighting.ShadowSoftness = ${shadowSoftness}
 Lighting.ClockTime = ${effectiveClock}
 Lighting.Brightness = ${config.brightness}
+Lighting.ExposureCompensation = ${config.exposureCompensation || 0}
 Lighting.Ambient = Color3.fromRGB(${amb[0]}, ${amb[1]}, ${amb[2]})
 Lighting.OutdoorAmbient = Color3.fromRGB(${outAmb[0]}, ${outAmb[1]}, ${outAmb[2]})
+Lighting.ColorShift_Top = Color3.fromRGB(${topCol[0]}, ${topCol[1]}, ${topCol[2]})
+Lighting.ColorShift_Bottom = Color3.fromRGB(${botCol[0]}, ${botCol[1]}, ${botCol[2]})
 
--- 2. ATMÓSFERA Y DISPERSIÓN DE LUZ (Atmosphere)
+-- 2. ATMÓSFERA Y DISPERSIÓN DE LUZ VOLUMÉTRICA (Atmosphere)
 local atmo = Lighting:FindFirstChildOfClass("Atmosphere")
 if not atmo then
     atmo = Instance.new("Atmosphere")
@@ -113,7 +129,7 @@ atmo.Color = Color3.fromRGB(${atmo.color[0]}, ${atmo.color[1]}, ${atmo.color[2]}
 atmo.Decay = Color3.fromRGB(${atmo.decay[0]}, ${atmo.decay[1]}, ${atmo.decay[2]})
 atmo.Glare = ${atmo.glare}
 
--- 3. EFECTO DE RESPLANDOR (BloomEffect)
+-- 3. EFECTO DE RESPLANDOR (BloomEffect para ventanas y neones)
 local bloom = Lighting:FindFirstChildOfClass("BloomEffect")
 if not bloom then
     bloom = Instance.new("BloomEffect")
@@ -135,7 +151,7 @@ cc.Contrast = ${cc.contrast}
 cc.Saturation = ${cc.saturation}
 cc.TintColor = Color3.fromRGB(${cc.tint[0]}, ${cc.tint[1]}, ${cc.tint[2]})
 
--- 5. RAYOS SOLARES (SunRaysEffect)
+-- 5. RAYOS SOLARES CREPUSCULARES (SunRaysEffect)
 local sunRays = Lighting:FindFirstChildOfClass("SunRaysEffect")
 ${
   config.sunRays
@@ -156,6 +172,6 @@ end
 `
 }
 
-print(string.format("[Environment] ✅ Atmósfera cinemática '%s' aplicada (Hora: %.1f, Future Lighting: %s).", "${config.name}", ${effectiveClock}, "${enableFutureLighting}"))
+print(string.format("[Environment AAA] ✅ Atmósfera cinemática '%s' aplicada (Hora: %.1f, Future Lighting: %s).", "${config.name}", ${effectiveClock}, "${enableFutureLighting}"))
 `;
 }

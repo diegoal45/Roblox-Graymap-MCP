@@ -738,11 +738,12 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
                 "modern_downtown",
                 "classic_brick",
                 "cyberpunk",
+                "commercial_avenue",
                 "industrial",
                 "favela",
               ],
               default: "modern_downtown",
-              description: "Estilo arquitectónico PBR y paleta visual",
+              description: "Estilo arquitectónico PBR y paleta visual AAA",
             },
             density: {
               type: "string",
@@ -768,11 +769,18 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             has_furniture: {
               type: "boolean",
               default: true,
-              description: "Incluir farolas con sombras, árboles en alcorques y bocas de incendio",
+              description: "Incluir farolas con sombras, árboles en alcorques, bancos y bocas de incendio",
+            },
+            has_plaza: {
+              type: "boolean",
+              default: true,
+              description: "En manzanas 3x3, convierte la parcela central en una plaza peatonal monumental con fuente de agua",
             },
             align_to_terrain: {
               type: "boolean",
               default: true,
+              description: "Nivela y cimenta automáticamente el terreno bajo el distrito para evitar que flote",
+            },
               description: "Nivela y cimenta automáticamente el terreno bajo el distrito para evitar que flote",
             },
             parent: {
@@ -813,6 +821,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
                 "modern_downtown",
                 "classic_brick",
                 "cyberpunk",
+                "commercial_avenue",
                 "industrial",
                 "favela",
               ],
@@ -826,7 +835,26 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             has_roof_props: {
               type: "boolean",
               default: true,
-              description: "Incluir caseta de ascensor, HVAC, tanque de agua y antena de telecomunicaciones",
+              description: "Incluir caseta de ascensor, HVAC doble ventilador, tanque de agua cilíndrico y antena con baliza roja",
+            },
+            has_balconies: {
+              type: "boolean",
+              default: true,
+              description: "Incluir balcones en voladizo con barandillas en pisos superiores",
+            },
+            has_fire_escapes: {
+              type: "boolean",
+              description: "Incluir escalera de incendios exterior de acero tipo Manhattan (por defecto según estilo)",
+            },
+            has_sidewalk_dining: {
+              type: "boolean",
+              default: true,
+              description: "Incluir mesas de velador, sillas de forja y jardineras en la acera frente al comercio",
+            },
+            has_setbacks: {
+              type: "boolean",
+              default: true,
+              description: "Activar retranqueos volumétricos (setbacks) escalonados con terrazas en edificios de 6+ pisos",
             },
             parent: {
               type: "string",
@@ -1639,6 +1667,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         seed: args.seed ?? 54321,
         hasFurniture: args.has_furniture ?? true,
         alignToTerrain: args.align_to_terrain ?? true,
+        hasPlaza: args.has_plaza ?? true,
         parent: args.parent || "City/Districts",
       });
 
@@ -1649,7 +1678,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         content: [
           {
             type: "text",
-            text: `🏙️ Distrito Urbano AAA '${args.name || "Downtown_District"}' generado exitosamente:\n- Estilo: ${args.style || "modern_downtown"} (Densidad: ${args.density || "high"})\n- Dimensiones: ${args.size ? args.size.join("x") : "240x240"} studs en centro [${(args.center || [0, 0]).join(", ")}]\n- Calzadas de asfalto, bordillos de granito y pasos de cebra peatonales integrados.\n- Subdivisión en parcelas compactas sin huecos muertos y fachadas 3D con escaparates.\n- Mobiliario urbano desplegado: ${args.has_furniture !== false ? "Farolas con sombras, árboles y bocas de incendio" : "Desactivado"}.\n- Terreno nivelado automáticamente: ${args.align_to_terrain !== false ? "Sí" : "No"}.`,
+            text: `🏙️ Distrito Urbano AAA '${args.name || "Downtown_District"}' generado exitosamente:\n- Estilo: ${args.style || "modern_downtown"} (Densidad: ${args.density || "high"})\n- Dimensiones: ${args.size ? args.size.join("x") : "240x240"} studs en centro [${(args.center || [0, 0]).join(", ")}]\n- Calzadas con asfalto oscuro, bordillos de granito, imbornales y pasos de cebra peatonales.\n- Orientación correcta de fachadas: los edificios miran a su calle perimetral correspondiente.\n- Portales con puertas reales, marcos y manillas en cada edificio comercial.\n- Callejones de servicio interiores equipados con contenedores de basura, palets y puertas de servicio.\n- Plaza central peatonal con fuente monumental activa: ${args.has_plaza !== false ? "Activada" : "Desactivada"}.\n- Mobiliario urbano desplegado: ${args.has_furniture !== false ? "Farolas con sombras, árboles, bancos y bocas de incendio" : "Desactivado"}.\n- Terreno nivelado automáticamente: ${args.align_to_terrain !== false ? "Sí" : "No"}.`,
           },
         ],
       };
@@ -1664,6 +1693,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         style: args.style || "modern_downtown",
         seed: args.seed ?? 1234,
         hasRoofProps: args.has_roof_props ?? true,
+        hasBalconies: args.has_balconies ?? true,
+        hasFireEscapes: args.has_fire_escapes ?? null,
+        hasSidewalkDining: args.has_sidewalk_dining ?? true,
+        hasSetbacks: args.has_setbacks ?? true,
         parent: args.parent || "City/Downtown",
       });
 
@@ -1674,7 +1707,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         content: [
           {
             type: "text",
-            text: `🏛️ Edificio Arquitectónico AAA '${args.name || "Detailed_Building"}' construido exitosamente:\n- Ubicación: [${args.position.join(", ")}]\n- Huella: ${args.footprint ? args.footprint.join("x") : "40x40"} studs | Pisos: ${args.floors ?? 5} niveles\n- Estilo: ${args.style || "modern_downtown"}\n- Planta baja comercial con escaparates, toldos y portal remetido.\n- Pisos superiores con ventanas 3D con alféizar e iluminación interior realista.\n- Azotea con caseta de ascensor, HVAC, tanque de agua cilíndrico y antena con baliza roja.`,
+            text: `🏛️ Edificio Arquitectónico AAA '${args.name || "Detailed_Building"}' construido exitosamente:\n- Ubicación: [${args.position.join(", ")}]\n- Huella: ${args.footprint ? args.footprint.join("x") : "40x40"} studs | Pisos: ${args.floors ?? 5} niveles\n- Estilo: ${args.style || "modern_downtown"}\n- Fachadas articuladas en 3D en las 4 direcciones (sin muros planos ciegos).\n- Portal monumental remetido con doble puerta batiente, manillones metálicos, espejo y marquesina suspendida con focos LED.\n- Puerta trasera de servicio con farol de seguridad.\n- Escaparates con zócalos, toldos a 45°, rótulos comerciales 3D retroiluminados y veladores de cafetería.\n- Pisos superiores con ventanas 3D con alféizar, dintel, parteluces e iluminación interior multinivel (LED/tungsteno).\n- Balcones en voladizo con barandillas y retranqueos volumétricos (setbacks).\n- Azotea habitable con caseta de ascensor transitable, HVAC doble ventilador, tanque de agua cilíndrico sobre zancos y antena con baliza roja.`,
           },
         ],
       };

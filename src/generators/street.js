@@ -1,16 +1,18 @@
-import { PALETTE } from "./palette.js";
 import { snapPosition } from "./grid.js";
 
 /**
- * Generador de Calles y Avenidas Completas con Asfalto, Aceras elevadas,
- * Líneas viales divisorias y Farolas de iluminación automáticas.
+ * Generador de Calles y Avenidas Completas AAA para Roblox.
+ * Calzada de asfalto texturizado, bordillos de granito salientes,
+ * aceras peatonales elevadas, líneas viales dobles continuas/discontinuas,
+ * tapas de registro/alcantarillas, rejillas de imbornal en cuneta
+ * y farolas realistas con sombras proyectadas en tiempo real.
  */
 export function generateStreetLuau({
   name = "Avenue",
   startPosition = [0, 0, -100],
   endPosition = [0, 0, 100],
   roadWidth = 24, // 2 carriles estándar de 12 studs cada uno
-  sidewalkWidth = 6, // aceras de 6 studs
+  sidewalkWidth = 8, // aceras amplias de 8 studs
   hasLanes = true,
   hasSidewalks = true,
   hasLamps = true,
@@ -52,12 +54,13 @@ local function buildStreet()
     local midPoint = (p1 + p2) / 2
     local roadCF = CFrame.lookAt(midPoint, p2)
 
-    local function makePart(pName, size, relCF, color, mat, canCol)
+    local function makePart(pName, size, relCF, color, mat, canCol, isDecor)
         local p = Instance.new("Part", model)
         p.Name = pName
         p.Anchored = true
         p.CanCollide = canCol ~= nil and canCol or true
         p.CanTouch = false
+        if isDecor then p.CanQuery = false end
         p.TopSurface = Enum.TopSurfaceType.Smooth
         p.BottomSurface = Enum.BottomSurfaceType.Smooth
         p.Size = size
@@ -67,65 +70,123 @@ local function buildStreet()
         return p
     end
 
+    local function makeCylinder(pName, size, relCF, color, mat)
+        local p = Instance.new("Part", model)
+        p.Name = pName
+        p.Shape = Enum.PartType.Cylinder
+        p.Anchored = true
+        p.CanCollide = false
+        p.CanTouch = false
+        p.CanQuery = false
+        p.Size = size
+        p.CFrame = roadCF * relCF
+        p.Color = color
+        p.Material = mat or Enum.Material.DiamondPlate
+        return p
+    end
+
     local rW = ${roadWidth}
     local sW = ${sidewalkWidth}
+    local curbW = 0.8
+    local curbH = 0.65
 
     -- 1. Calzada de Asfalto (rebajada -0.5 studs)
-    makePart("Asphalt_Road", Vector3.new(rW, 1, length), CFrame.new(0, -0.5, 0), Color3.fromRGB(42, 42, 46), Enum.Material.Concrete)
+    makePart("Asphalt_Road", Vector3.new(rW, 1.2, length), CFrame.new(0, -0.6, 0), Color3.fromRGB(38, 40, 44), Enum.Material.Concrete)
 
-    -- 2. Aceras Elevadas a los costados (+0.5 studs sobre el asfalto)
+    -- 2. Aceras y Bordillos de Granito
     ${
       hasSidewalks
         ? `
-    local swColor = Color3.fromRGB(170, 170, 175)
+    local swColor = Color3.fromRGB(195, 198, 204)
+    local curbColor = Color3.fromRGB(150, 155, 162)
     local leftOffset = - (rW / 2) - (sW / 2)
     local rightOffset = (rW / 2) + (sW / 2)
 
-    makePart("Sidewalk_Left", Vector3.new(sW, 1, length), CFrame.new(leftOffset, 0, 0), swColor, Enum.Material.Concrete)
-    makePart("Sidewalk_Right", Vector3.new(sW, 1, length), CFrame.new(rightOffset, 0, 0), swColor, Enum.Material.Concrete)
+    -- Aceras peatonales
+    makePart("Sidewalk_Left", Vector3.new(sW, curbH, length), CFrame.new(leftOffset, curbH / 2, 0), swColor, Enum.Material.Concrete)
+    makePart("Sidewalk_Right", Vector3.new(sW, curbH, length), CFrame.new(rightOffset, curbH / 2, 0), swColor, Enum.Material.Concrete)
+
+    -- Bordillos de granito exteriores con resalte
+    local curbLeftX = - (rW / 2) - (curbW / 2)
+    local curbRightX = (rW / 2) + (curbW / 2)
+    makePart("Curb_Left", Vector3.new(curbW, curbH + 0.1, length), CFrame.new(curbLeftX, curbH / 2, 0), curbColor, Enum.Material.Granite)
+    makePart("Curb_Right", Vector3.new(curbW, curbH + 0.1, length), CFrame.new(curbRightX, curbH / 2, 0), curbColor, Enum.Material.Granite)
+
+    -- Rejillas de imbornal pluvial en la cuneta del bordillo
+    local drainStep = 50
+    local drainCount = math.max(1, math.floor(length / drainStep))
+    for d = 1, drainCount do
+        local drainZ = (-length / 2) + (d - 0.5) * (length / drainCount)
+        makePart("Storm_Drain_L_" .. d, Vector3.new(1.8, 0.1, 3.2), CFrame.new(-rW / 2 + 1.0, 0.02, drainZ), Color3.fromRGB(45, 48, 54), Enum.Material.DiamondPlate, false, true)
+        makePart("Storm_Drain_R_" .. d, Vector3.new(1.8, 0.1, 3.2), CFrame.new(rW / 2 - 1.0, 0.02, drainZ), Color3.fromRGB(45, 48, 54), Enum.Material.DiamondPlate, false, true)
+    end
     `
         : ""
     }
 
-    -- 3. Líneas divisorias centrales de carril
+    -- 3. Líneas Viales (Centro amarillo discontinuo + bordes blancos continuos)
     ${
       hasLanes
         ? `
-    local stripeLength = 6
+    local stripeLength = 7
     local stripeGap = 6
     local totalStripeCycle = stripeLength + stripeGap
     local stripeCount = math.floor(length / totalStripeCycle)
 
     for i = 1, stripeCount do
         local offsetZ = (-length / 2) + ((i - 0.5) * totalStripeCycle)
-        makePart("Center_Stripe_" .. i, Vector3.new(0.6, 0.05, stripeLength), CFrame.new(0, 0.025, offsetZ), Color3.fromRGB(240, 195, 40), Enum.Material.Neon, false)
+        makePart("Center_Stripe_" .. i, Vector3.new(0.7, 0.06, stripeLength), CFrame.new(0, 0.03, offsetZ), Color3.fromRGB(240, 200, 45), Enum.Material.SmoothPlastic, false, true)
+    end
+
+    -- Líneas blancas continuas laterales (delimitadoras de calzada)
+    local edgeX = rW / 2 - 1.2
+    makePart("Edge_Stripe_Left", Vector3.new(0.6, 0.05, length), CFrame.new(-edgeX, 0.025, 0), Color3.fromRGB(245, 248, 252), Enum.Material.SmoothPlastic, false, true)
+    makePart("Edge_Stripe_Right", Vector3.new(0.6, 0.05, length), CFrame.new(edgeX, 0.025, 0), Color3.fromRGB(245, 248, 252), Enum.Material.SmoothPlastic, false, true)
+
+    -- Tapas de registro de alcantarillado circulares
+    if length >= 40 then
+        local mhCF1 = CFrame.new(-4, 0.04, -length / 4) * CFrame.Angles(0, 0, math.rad(90))
+        local mhCF2 = CFrame.new(4, 0.04, length / 4) * CFrame.Angles(0, 0, math.rad(90))
+        makeCylinder("Manhole_A", Vector3.new(3.0, 0.08, 3.0), mhCF1, Color3.fromRGB(50, 54, 60), Enum.Material.DiamondPlate)
+        makeCylinder("Manhole_B", Vector3.new(3.0, 0.08, 3.0), mhCF2, Color3.fromRGB(50, 54, 60), Enum.Material.DiamondPlate)
     end
     `
         : ""
     }
 
-    -- 4. Farolas de Calle (Street Lamps) a intervalos regulares
+    -- 4. Farolas de Calle AAA con brazo curvo y sombras proyectadas
     ${
       hasLamps && hasSidewalks
         ? `
     local lampDist = ${lampInterval}
     local lampCount = math.max(1, math.floor(length / lampDist))
-    local lampOffset = (rW / 2) + 1.2 -- En el borde de la acera
+    local lampOffset = (rW / 2) + 2.0
 
     for i = 1, lampCount do
         local zOff = (-length / 2) + ((i - 0.5) * (length / lampCount))
-        -- Farola en acera izquierda
-        local poleL = makePart("Lamp_Pole_L_" .. i, Vector3.new(0.8, 16, 0.8), CFrame.new(-lampOffset, 8, zOff), Color3.fromRGB(45, 50, 55), Enum.Material.Metal)
-        local headL = makePart("Lamp_Head_L_" .. i, Vector3.new(1.2, 0.4, 1.0), CFrame.new(-lampOffset + 1.5, 15.6, zOff), Color3.fromRGB(245, 240, 230), Enum.Material.Neon)
-        local lightL = Instance.new("PointLight", headL)
-        lightL.Color = Color3.fromRGB(255, 240, 210)
-        lightL.Brightness = 2.0
-        lightL.Range = 36
-        lightL.Shadows = true
+        local isLeft = (i % 2 == 1)
+        local posX = isLeft and -lampOffset or lampOffset
+        local armDir = isLeft and 1 or -1
+
+        -- Poste metálico con zócalo
+        local base = makePart("Lamp_Base_" .. i, Vector3.new(1.4, 1.2, 1.4), CFrame.new(posX, curbH + 0.6, zOff), Color3.fromRGB(35, 38, 44), Enum.Material.Metal, true)
+        local pole = makePart("Lamp_Pole_" .. i, Vector3.new(0.8, 16, 0.8), CFrame.new(posX, curbH + 8.5, zOff), Color3.fromRGB(42, 45, 52), Enum.Material.Metal, true)
+        -- Brazo curvado sobre la calzada
+        local arm = makePart("Lamp_Arm_" .. i, Vector3.new(2.8, 0.5, 0.6), CFrame.new(posX + armDir * 1.4, curbH + 16.2, zOff), Color3.fromRGB(42, 45, 52), Enum.Material.Metal, false, true)
+        local head = makePart("Lamp_Head_" .. i, Vector3.new(1.6, 0.6, 1.4), CFrame.new(posX + armDir * 2.8, curbH + 15.8, zOff), Color3.fromRGB(35, 38, 44), Enum.Material.Metal, false, true)
+        local bulb = makePart("Lamp_Bulb_" .. i, Vector3.new(1.2, 0.2, 1.0), CFrame.new(posX + armDir * 2.8, curbH + 15.4, zOff), Color3.fromRGB(255, 240, 205), Enum.Material.Neon, false, true)
+
+        local light = Instance.new("PointLight", bulb)
+        light.Color = Color3.fromRGB(255, 232, 185)
+        light.Brightness = 2.0
+        light.Range = 36
+        light.Shadows = true
     end
     `
         : ""
     }
+
+    print(string.format("[StreetEngine AAA] ✅ Calle '%s' (longitud %.1f studs, ancho %d studs) generada con éxito en '%s'.", "${name}", length, rW, "${parent}"))
 end
 
 buildStreet()
