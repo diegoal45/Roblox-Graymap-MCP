@@ -89,11 +89,45 @@ Mediante `get_workspace_layout()`, OpenCode puede inspeccionar las partes y mode
 | `create_stairs` | `startX`, `startY`, `startZ`, `width`, `totalHeight`, `direction` | Construye escaleras peatonales fluidas ($\le 1.1\text{ studs}$ por peldaño). |
 | `add_tags_and_attributes` | `target_path`, `tags`, `attributes`, `recursive` | Asigna tags de CollectionService y atributos a partes o modelos existentes en Studio. |
 | `clear_folder` | `folder_path` | Elimina una carpeta específica en Workspace o todo `Graybox`. |
+| `generate_terrain` | `center`, `size`, `biome`, `base_height`, `height_amplitude`, `water_level`, `seed` | **Paisajes Procedurales Voxel:** Genera biomas de alta fidelidad (`mountains`, `hills`, `canyon`, `plains`, `dunes`, `island`, `river_valley`, `plateau`) con pendientes calculadas y cuerpos de agua nativos. |
+| `flatten_terrain_area` | `position`, `size`, `material`, `foundation_depth`, `clear_height`, `blend_margin`, `retaining_wall` | **Nivelado de Parcelas:** Despeja montes con `Air` y rellena cimientos sólidos nivelados para asentar rascacielos, plazas o autopistas sin que floten ni se entierren. |
+| `carve_terrain_path` | `start_point`, `end_point`, `waypoints`, `width`, `height`, `mode`, `surface_material` | **Trazado de Rutas en Terreno:** Excava carreteras a cielo abierto, túneles subterráneos abovedados (sin destruir la cima), canales fluviales navegables con agua o trincheras. |
+| `shape_terrain` | `shape`, `operation`, `position`, `size`, `radius`, `rotation`, `material` | **Esculpido Paramétrico:** Inserta o sustrae primitivas de volumen (`Block`, `Ball`, `Cylinder`, `Wedge`) con adición de material o excavación con `Air`. |
+| `paint_terrain_material` | `mode`, `center`, `size`, `target_material`, `source_material`, `region_bounds` | **Pintor de Materiales:** Pinta cajas/esferas o ejecuta sustitución nativa `Terrain:ReplaceMaterial` (ej: cambiar todo `Grass` por `Snow` o `Sandstone`). |
+| `clear_terrain` | `all`, `region_bounds` | **Limpieza de Terreno:** Elimina todo el terreno del mundo (`workspace.Terrain:Clear()`) o un sector específico con soporte `Ctrl + Z`. |
+| `configure_water` | `color`, `reflectance`, `transparency`, `wave_size`, `wave_speed` | **Atmósfera Acuática:** Configura visuales del agua nativa de Roblox (color RGB, reflectancia, transparencia y oleaje). |
 | `execute_raw_luau` | `code`, `actionName` | Ejecuta Luau arbitrario con soporte completo de Undo/Redo (`Ctrl + Z`). |
 
 ---
 
-## 5. Configuración y Puesta en Marcha
+## 5. Motor de Terreno Nativo de Roblox (Smooth Terrain Engine)
+
+El módulo de terrenos aprovecha al 100% el motor de voxeles a resolución de cuadrícula de 4 studs de Roblox (`workspace.Terrain`), ofreciendo:
+
+### 1. Biomas Procedurales Disponibles (`generate_terrain`)
+* **`mountains`:** Cumbres escarpadas con picos nevados (`Snow`), laderas empinadas de roca (`Rock`/`Slate`) y valles fértiles (`Grass`).
+* **`hills`:** Colinas suaves onduladas con hierba continua, ideales para expansiones suburbanas o valles abiertos.
+* **`canyon`:** Mesetas escalonadas y gargantas secas compuestas de estratos de arenisca (`Sandstone`) y roca.
+* **`plains`:** Praderas con microondulaciones naturales, perfectas para colocar distritos urbanos masivos.
+* **`dunes`:** Desierto con crestas sinuosas de arena cálida (`Sand`).
+* **`island`:** Isla oceánica con máscara radial de caída, playas periféricas de arena suave (`Sand`) y océano (`Water`).
+* **`river_valley`:** Valle atravesado por un cauce fluvial sinuoso relleno de agua y lecho arenoso.
+* **`plateau`:** Meseta tabular de cumbre completamente plana para fortalezas o bases elevadas.
+
+### 2. Nivelado de Parcelas Urbanas (`flatten_terrain_area`)
+Soluciona el problema de asentar edificios en terrenos accidentados:
+1. **Despeje aéreo:** Excava con `Air` cualquier monte o ladera que atraviese el volumen del edificio.
+2. **Cimentación sólida:** Rellena las depresiones inferiores con una losa sólida de hormigón, adoquines o piedra hasta la cota `targetY`.
+3. **Muros de contención opcionales:** Instancia muros perimetrales de hormigón si la excavación genera cortes de tierra verticales.
+
+### 3. Trazado de Carreteras y Túneles Subterráneos (`carve_terrain_path`)
+* En modo **`tunnel`**, utiliza perforación cilíndrica con `Air` en el subsuelo, **manteniendo intactos la montaña, vegetación y suelo superior**.
+* En modo **`road`**, realiza desmonte a cielo abierto y asfalta la rasante.
+* En modo **`river`**, excava una cuenca y la llena con `Water` y lecho de arena.
+
+---
+
+## 6. Configuración y Puesta en Marcha
 
 ### 1. Activar el Plugin en Roblox Studio
 1. Abre tu proyecto o un *Baseplate* en **Roblox Studio**.
@@ -137,7 +171,7 @@ npm run logs:clear
 
 ---
 
-## 6. Guía de Generación con OpenCode (Cómo Usarlo)
+## 7. Guía de Generación con OpenCode (Cómo Usarlo)
 
 ### ⚠️ Reglas de Oro al interactuar con OpenCode
 
