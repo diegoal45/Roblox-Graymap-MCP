@@ -1,0 +1,414 @@
+--[[
+    GrayboxCityMCP - Roblox Studio Plugin
+    Enlace bidireccional con OpenCode MCP + Ventana Dockable (Estilo Rojo)
+]]
+
+local HttpService = game:GetService("HttpService")
+local ChangeHistoryService = game:GetService("ChangeHistoryService")
+local CollectionService = game:GetService("CollectionService")
+
+local BRIDGE_URL = "http://127.0.0.1:30250"
+local POLL_INTERVAL = 0.35
+local isEnabled = true
+local isConnected = false
+local lastPingTime = 0
+
+-- 1. CREAR BOTÓN EN LA BARRA DE HERRAMIENTAS
+local toolbar = plugin:CreateToolbar("Graybox MCP")
+local toggleButton = toolbar:CreateButton(
+    "OpenGrayboxMCP",
+    "Abre o cierra el panel de control de Graybox City MCP",
+    "rbxassetid://10631267425"
+)
+toggleButton.ClickableWhenViewportHidden = true
+
+-- 2. CREAR VENTANA DOCKABLE (ESTILO ROJO)
+local widgetInfo = DockWidgetPluginGuiInfo.new(
+    Enum.InitialDockState.Right, -- Acoplada a la derecha como Rojo
+    true,                        -- Inicialmente abierta
+    false,                       -- No sobrescribir estado previo si se guarda
+    320,                         -- Ancho por defecto
+    480,                         -- Alto por defecto
+    260,                         -- Ancho mínimo
+    350                          -- Alto mínimo
+)
+
+local widget = plugin:CreateDockWidgetPluginGui("GrayboxCityMCP_Widget", widgetInfo)
+widget.Title = "Graybox City MCP"
+
+toggleButton.Click:Connect(function()
+    widget.Enabled = not widget.Enabled
+    toggleButton:SetActive(widget.Enabled)
+end)
+
+-- 3. CONSTRUCCIÓN DE LA INTERFAZ DE USUARIO (UI)
+local bg = Instance.new("Frame")
+bg.Name = "MainBackground"
+bg.Size = UDim2.new(1, 0, 1, 0)
+bg.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+bg.BorderSizePixel = 0
+bg.Parent = widget
+
+local pad = Instance.new("UIPadding")
+pad.PaddingTop = UDim.new(0, 12)
+pad.PaddingBottom = UDim.new(0, 12)
+pad.PaddingLeft = UDim.new(0, 12)
+pad.PaddingRight = UDim.new(0, 12)
+pad.Parent = bg
+
+local list = Instance.new("UIListLayout")
+list.SortOrder = Enum.SortOrder.LayoutOrder
+list.Padding = UDim.new(0, 10)
+list.Parent = bg
+
+-- Cabecera
+local header = Instance.new("Frame")
+header.Name = "Header"
+header.Size = UDim2.new(1, 0, 0, 32)
+header.BackgroundTransparency = 1
+header.LayoutOrder = 1
+header.Parent = bg
+
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Text = "🏙️ GRAYBOX CITY MCP"
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.TextSize = 15
+titleLabel.TextColor3 = Color3.fromRGB(240, 240, 245)
+titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+titleLabel.Size = UDim2.new(1, 0, 0, 18)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Parent = header
+
+local subLabel = Instance.new("TextLabel")
+subLabel.Text = "OpenCode AI Bridge • Puerto 30250"
+subLabel.Font = Enum.Font.Gotham
+subLabel.TextSize = 11
+subLabel.TextColor3 = Color3.fromRGB(150, 150, 160)
+subLabel.TextXAlignment = Enum.TextXAlignment.Left
+subLabel.Position = UDim2.new(0, 0, 0, 18)
+subLabel.Size = UDim2.new(1, 0, 0, 14)
+subLabel.BackgroundTransparency = 1
+subLabel.Parent = header
+
+-- Tarjeta de Estado de Conexión (Estilo Rojo)
+local statusCard = Instance.new("Frame")
+statusCard.Name = "StatusCard"
+statusCard.Size = UDim2.new(1, 0, 0, 68)
+statusCard.BackgroundColor3 = Color3.fromRGB(40, 40, 48)
+statusCard.BorderSizePixel = 0
+statusCard.LayoutOrder = 2
+statusCard.Parent = bg
+
+local cardCorner = Instance.new("UICorner")
+cardCorner.CornerRadius = UDim.new(0, 8)
+cardCorner.Parent = statusCard
+
+local statusDot = Instance.new("Frame")
+statusDot.Name = "StatusDot"
+statusDot.Size = UDim2.new(0, 12, 0, 12)
+statusDot.Position = UDim2.new(0, 12, 0, 14)
+statusDot.BackgroundColor3 = Color3.fromRGB(220, 50, 50) -- Rojo inicialmente
+statusDot.BorderSizePixel = 0
+statusDot.Parent = statusCard
+
+local dotCorner = Instance.new("UICorner")
+dotCorner.CornerRadius = UDim.new(1, 0)
+dotCorner.Parent = statusDot
+
+local statusText = Instance.new("TextLabel")
+statusText.Name = "StatusText"
+statusText.Text = "Desconectado"
+statusText.Font = Enum.Font.GothamBold
+statusText.TextSize = 13
+statusText.TextColor3 = Color3.fromRGB(220, 70, 70)
+statusText.TextXAlignment = Enum.TextXAlignment.Left
+statusText.Position = UDim2.new(0, 32, 0, 11)
+statusText.Size = UDim2.new(1, -40, 0, 18)
+statusText.BackgroundTransparency = 1
+statusText.Parent = statusCard
+
+local infoText = Instance.new("TextLabel")
+infoText.Name = "InfoText"
+infoText.Text = "Esperando que OpenCode o el MCP inicien..."
+infoText.Font = Enum.Font.Gotham
+infoText.TextSize = 11
+infoText.TextColor3 = Color3.fromRGB(160, 160, 170)
+infoText.TextXAlignment = Enum.TextXAlignment.Left
+infoText.Position = UDim2.new(0, 12, 0, 36)
+infoText.Size = UDim2.new(1, -24, 0, 24)
+infoText.BackgroundTransparency = 1
+infoText.TextWrapped = true
+infoText.Parent = statusCard
+
+-- Panel de Botones de Control
+local btnContainer = Instance.new("Frame")
+btnContainer.Name = "Buttons"
+btnContainer.Size = UDim2.new(1, 0, 0, 32)
+btnContainer.BackgroundTransparency = 1
+btnContainer.LayoutOrder = 3
+btnContainer.Parent = bg
+
+local btnLayout = Instance.new("UIListLayout")
+btnLayout.FillDirection = Enum.FillDirection.Horizontal
+btnLayout.SortOrder = Enum.SortOrder.LayoutOrder
+btnLayout.Padding = UDim.new(0, 8)
+btnLayout.Parent = btnContainer
+
+local function createButton(text, bgCol, layoutOrd, onClick)
+    local btn = Instance.new("TextButton")
+    btn.Text = text
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 11
+    btn.TextColor3 = Color3.fromRGB(240, 240, 245)
+    btn.BackgroundColor3 = bgCol
+    btn.BorderSizePixel = 0
+    btn.Size = UDim2.new(0.31, 0, 1, 0)
+    btn.LayoutOrder = layoutOrd
+    btn.Parent = btnContainer
+
+    local bCorner = Instance.new("UICorner")
+    bCorner.CornerRadius = UDim.new(0, 6)
+    bCorner.Parent = btn
+
+    btn.MouseButton1Click:Connect(onClick)
+    return btn
+end
+
+-- Terminal de Logs / Historial
+local logFrame = Instance.new("Frame")
+logFrame.Name = "LogFrame"
+logFrame.Size = UDim2.new(1, 0, 1, -170)
+logFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
+logFrame.BorderSizePixel = 0
+logFrame.LayoutOrder = 4
+logFrame.Parent = bg
+
+local logCorner = Instance.new("UICorner")
+logCorner.CornerRadius = UDim.new(0, 8)
+logCorner.Parent = logFrame
+
+local logScroll = Instance.new("ScrollingFrame")
+logScroll.Name = "Scroll"
+logScroll.Size = UDim2.new(1, -12, 1, -12)
+logScroll.Position = UDim2.new(0, 6, 0, 6)
+logScroll.BackgroundTransparency = 1
+logScroll.ScrollBarThickness = 4
+logScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+logScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+logScroll.Parent = logFrame
+
+local logList = Instance.new("UIListLayout")
+logList.SortOrder = Enum.SortOrder.LayoutOrder
+logList.Padding = UDim.new(0, 4)
+logList.Parent = logScroll
+
+local logCount = 0
+local function addLog(msg, color)
+    logCount = logCount + 1
+    local line = Instance.new("TextLabel")
+    line.Name = "Log_" .. logCount
+    line.Text = string.format("[%s] %s", os.date("%H:%M:%S"), msg)
+    line.Font = Enum.Font.Code
+    line.TextSize = 11
+    line.TextColor3 = color or Color3.fromRGB(200, 200, 205)
+    line.TextXAlignment = Enum.TextXAlignment.Left
+    line.Size = UDim2.new(1, 0, 0, 16)
+    line.BackgroundTransparency = 1
+    line.TextWrapped = true
+    line.LayoutOrder = logCount
+    line.Parent = logScroll
+
+    logScroll.CanvasPosition = Vector2.new(0, 999999)
+end
+
+-- Funciones de los botones
+local pauseBtn
+pauseBtn = createButton("⏸️ Pausar", Color3.fromRGB(55, 55, 65), 1, function()
+    isEnabled = not isEnabled
+    if isEnabled then
+        pauseBtn.Text = "⏸️ Pausar"
+        pauseBtn.BackgroundColor3 = Color3.fromRGB(55, 55, 65)
+        addLog("▶️ Bridge reanudado", Color3.fromRGB(100, 200, 255))
+    else
+        pauseBtn.Text = "▶️ Activar"
+        pauseBtn.BackgroundColor3 = Color3.fromRGB(180, 100, 30)
+        statusDot.BackgroundColor3 = Color3.fromRGB(160, 160, 160)
+        statusText.Text = "En Pausa"
+        statusText.TextColor3 = Color3.fromRGB(160, 160, 160)
+        addLog("⏸️ Bridge en pausa manual", Color3.fromRGB(240, 180, 50))
+    end
+end)
+
+createButton("🔄 Probar", Color3.fromRGB(45, 90, 160), 2, function()
+    addLog("🔍 Probando enlace en " .. BRIDGE_URL .. "...", Color3.fromRGB(180, 180, 255))
+    local ok, res = pcall(function()
+        return HttpService:RequestAsync({ Url = BRIDGE_URL .. "/status", Method = "GET" })
+    end)
+    if ok and res.StatusCode == 200 then
+        addLog("🟢 Servidor MCP responde correctamente", Color3.fromRGB(60, 220, 100))
+    else
+        addLog("🔴 Servidor no detectado. ¿OpenCode está abierto?", Color3.fromRGB(240, 80, 80))
+    end
+end)
+
+createButton("🧹 Limpiar", Color3.fromRGB(160, 45, 45), 3, function()
+    local g = workspace:FindFirstChild("Graybox")
+    local c = workspace:FindFirstChild("City")
+    local rec = ChangeHistoryService:TryBeginRecording("Clear Graybox via UI")
+    local count = 0
+    if g then g:Destroy() count = count + 1 end
+    if c then c:Destroy() count = count + 1 end
+    if rec then ChangeHistoryService:FinishRecording(rec, Enum.FinishRecordingOperation.Commit) end
+    addLog("🧹 Workspace limpiado (Ctrl+Z disponible)", Color3.fromRGB(240, 140, 50))
+end)
+
+addLog("🟢 Plugin iniciado correctamente.", Color3.fromRGB(80, 220, 120))
+
+-- 4. FEEDBACK LOOP Y RESOLUCIÓN DE RUTAS
+local function resolvePath(pathStr)
+    if not pathStr or pathStr == "" or pathStr == "Workspace" or pathStr == "workspace" then
+        return workspace
+    end
+    local current = workspace
+    for _, part in ipairs(string.split(pathStr, "/")) do
+        if part ~= "" then
+            local nextObj = current:FindFirstChild(part)
+            if not nextObj then return nil end
+            current = nextObj
+        end
+    end
+    return current
+end
+
+local function inspectHierarchy(obj, currentDepth, maxDepth)
+    local info = {
+        name = obj.Name,
+        className = obj.ClassName,
+        tags = CollectionService:GetTags(obj),
+        attributes = obj:GetAttributes(),
+    }
+
+    if obj:IsA("Model") then
+        local cf, size = obj:GetBoundingBox()
+        info.position = { math.round(cf.Position.X * 10) / 10, math.round(cf.Position.Y * 10) / 10, math.round(cf.Position.Z * 10) / 10 }
+        info.size = { math.round(size.X * 10) / 10, math.round(size.Y * 10) / 10, math.round(size.Z * 10) / 10 }
+    elseif obj:IsA("BasePart") then
+        info.position = { math.round(obj.Position.X * 10) / 10, math.round(obj.Position.Y * 10) / 10, math.round(obj.Position.Z * 10) / 10 }
+        info.size = { math.round(obj.Size.X * 10) / 10, math.round(obj.Size.Y * 10) / 10, math.round(obj.Size.Z * 10) / 10 }
+        info.material = obj.Material.Name
+    end
+
+    if currentDepth < maxDepth and (obj:IsA("Folder") or obj:IsA("Model")) then
+        local children = {}
+        for _, child in ipairs(obj:GetChildren()) do
+            if child:IsA("Model") or child:IsA("Folder") or child:IsA("BasePart") then
+                table.insert(children, inspectHierarchy(child, currentDepth + 1, maxDepth))
+            end
+        end
+        info.children = children
+    end
+
+    return info
+end
+
+-- 5. HILO PRINCIPAL DE COMUNICACIÓN (POLLING)
+task.spawn(function()
+    while true do
+        if isEnabled then
+            local success, response = pcall(function()
+                return HttpService:RequestAsync({
+                    Url = BRIDGE_URL .. "/poll",
+                    Method = "GET",
+                    Headers = { ["Cache-Control"] = "no-cache" },
+                })
+            end)
+
+            if success and (response.StatusCode == 200 or response.StatusCode == 204) then
+                if not isConnected then
+                    isConnected = true
+                    statusDot.BackgroundColor3 = Color3.fromRGB(50, 205, 50) -- Verde
+                    statusText.Text = "Conectado a OpenCode"
+                    statusText.TextColor3 = Color3.fromRGB(60, 220, 100)
+                    infoText.Text = "Enlace activo en http://127.0.0.1:30250"
+                    addLog("🟢 Conectado al servidor MCP", Color3.fromRGB(60, 220, 100))
+                end
+
+                if response.StatusCode == 200 and response.Body and response.Body ~= "" then
+                    local okDecode, cmd = pcall(function()
+                        return HttpService:JSONDecode(response.Body)
+                    end)
+
+                    if okDecode and cmd and cmd.id then
+                        -- Caso A: Lectura (Feedback Loop)
+                        if cmd.type == "get_layout" then
+                            addLog("🔍 Feedback Loop: Leyendo " .. tostring(cmd.folder_path), Color3.fromRGB(100, 180, 255))
+                            local target = resolvePath(cmd.folder_path)
+                            local responseData = {}
+
+                            if not target then
+                                responseData = { exists = false, message = "Ruta no encontrada." }
+                            else
+                                responseData = { exists = true, root = cmd.folder_path, layout = inspectHierarchy(target, 1, cmd.max_depth or 3) }
+                            end
+
+                            pcall(function()
+                                HttpService:RequestAsync({
+                                    Url = BRIDGE_URL .. "/response",
+                                    Method = "POST",
+                                    Headers = { ["Content-Type"] = "application/json" },
+                                    Body = HttpService:JSONEncode({ id = cmd.id, success = true, data = responseData }),
+                                })
+                            end)
+
+                        -- Caso B: Construcción (Batch / Luau)
+                        elseif cmd.code then
+                            local actName = cmd.actionName or "Graybox Action"
+                            addLog("🔨 Ejecutando: " .. actName, Color3.fromRGB(240, 200, 80))
+
+                            local rec = ChangeHistoryService:TryBeginRecording(actName)
+                            local execOk, execErr = pcall(function()
+                                local fn, compileErr = loadstring(cmd.code)
+                                if not fn then error("Error Luau: " .. tostring(compileErr)) end
+                                fn()
+                            end)
+
+                            if rec then
+                                if execOk then
+                                    ChangeHistoryService:FinishRecording(rec, Enum.FinishRecordingOperation.Commit)
+                                    addLog("✅ Completado: " .. actName, Color3.fromRGB(60, 220, 100))
+                                else
+                                    ChangeHistoryService:FinishRecording(rec, Enum.FinishRecordingOperation.Cancel)
+                                    addLog("❌ Error: " .. tostring(execErr), Color3.fromRGB(240, 70, 70))
+                                end
+                            end
+
+                            pcall(function()
+                                HttpService:RequestAsync({
+                                    Url = BRIDGE_URL .. "/response",
+                                    Method = "POST",
+                                    Headers = { ["Content-Type"] = "application/json" },
+                                    Body = HttpService:JSONEncode({
+                                        id = cmd.id,
+                                        success = execOk,
+                                        error = execErr and tostring(execErr) or nil,
+                                    }),
+                                })
+                            end)
+                        end
+                    end
+                end
+            else
+                if isConnected then
+                    isConnected = false
+                    statusDot.BackgroundColor3 = Color3.fromRGB(220, 50, 50) -- Rojo
+                    statusText.Text = "Desconectado"
+                    statusText.TextColor3 = Color3.fromRGB(220, 70, 70)
+                    infoText.Text = "No se detecta el servidor en 127.0.0.1:30250"
+                    addLog("🔴 Conexión perdida con el MCP", Color3.fromRGB(240, 70, 70))
+                end
+            end
+        end
+
+        task.wait(POLL_INTERVAL)
+    end
+end)
