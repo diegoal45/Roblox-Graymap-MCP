@@ -119,22 +119,42 @@ El archivo de configuración ya se encuentra en tu directorio global `~/.config/
 
 ---
 
-## 6. Ejemplos de Prompts Universales para OpenCode
+## 6. Guía de Generación con OpenCode (Cómo Usarlo)
 
-* **Verificación de Enlace:**
-  > *"Comprueba si estás conectado a Roblox Studio."*
+### ⚠️ Reglas de Oro al interactuar con OpenCode
 
-* **Estructura Modular con Puertas:**
-  > *"Crea una estructura hueca con set_hollow_box de 40x16x40 studs llamada 'MainHall' en (0, 0, 0) dentro de 'Graybox/Building_A' con una puerta transitable en la pared Norte."*
+1. **Abrir siempre una Nueva Sesión (`+`):**
+   * En OpenCode Desktop, cada pestaña/chat fija las herramientas disponibles en el momento en que se crea.
+   * Si OpenCode te responde: *"No dispongo de esa herramienta en esta sesión"*, significa que estás en un chat viejo creado antes de registrar el MCP. Simplemente haz clic en el botón **`+`** (arriba a la izquierda) para abrir un chat limpio.
 
-* **Rampa y Plataforma Elevada:**
-  > *"Crea una rampa spawn_wedge de 16 studs de ancho, 12 studs de alto y 48 studs de largo que suba hacia una plataforma en 'Graybox/Platforms'."*
+2. **Habla en Lenguaje Natural (NO pegues código JSON crudo):**
+   * OpenCode es un agente autónomo de IA. **No debes pegar el código JSON de la herramienta manualmente en el chat**, porque la IA pensará que es un mensaje de texto normal.
+   * En su lugar, dale instrucciones en español claro describiendo lo que necesitas. La IA se encargará automáticamente de seleccionar la herramienta (`build_structure`, `set_hollow_box`, `spawn_wedge`, etc.), formatear los argumentos y enviarlos a Roblox Studio.
 
-* **Escaleras Técnicas para Avatar:**
-  > *"Coloca una escalera spawn_truss de 20 studs de altura en la posición (20, 0, 20) guardada en 'Graybox/Ladders'."*
+---
 
-* **Inspección de lo Construido (Feedback Loop):**
-  > *"Usa get_workspace_layout para leer la carpeta 'Graybox' y dime qué objetos existen y cuáles son sus coordenadas."*
+### 💬 Ejemplos de Prompts Listos para Copiar y Pegar
 
-* **Deshacer Cambios:**
-  > Puedes presionar **`Ctrl + Z`** directamente en **Roblox Studio** en cualquier momento para revertir el último cambio generado por la IA.
+#### 1. Verificación Inicial de Conexión
+> *"Comprueba si estás conectado a Roblox Studio usando check_studio_connection y dime qué herramientas tienes disponibles."*
+
+#### 2. Terreno Base y Canal (Estructura Base)
+> *"Usa build_structure para generar el terreno base de 4000x3600 studs en Y = 0 dentro de 'City/Terrain' y un canal central de 40 studs de ancho por 12 de profundidad con material Concrete."*
+
+#### 3. Edificio Completo con Puerta Transitables y Tags
+> *"Crea el edificio del Banco con set_hollow_box en la posición (0, 0, 0) de tamaño 40x16x40 studs guardado en 'City/Downtown/Bank', con una puerta al Norte de 8x10 studs etiquetada 'Heist_Target'."*
+
+#### 4. Rampa de Autopista Elevada
+> *"Genera una rampa con spawn_wedge de 20 studs de ancho, 12 studs de alto y 50 studs de largo en 'City/Highways/Ramp_1' con material Concrete orientada hacia el Este."*
+
+#### 5. Escalera Técnica o Andamio
+> *"Coloca una escalera técnica con spawn_truss de 24 studs de altura en la posición (30, 0, 30) dentro de 'City/Alleys/Ladder_1'."*
+
+#### 6. Lote Masivo de Estructuras (Batching de Casas)
+> *"Usa build_structure para generar en un solo lote 10 casas modulares de 20x12x20 studs escalonadas sobre el eje X a intervalos de 28 studs en 'City/Residential/Blocks'."*
+
+#### 7. Feedback Loop (Leer lo que ya está en Studio antes de construir)
+> *"Usa get_workspace_layout para inspeccionar la carpeta 'City' y dime qué edificios existen actualmente y en qué coordenadas están para no construir encima."*
+
+#### 8. Deshacer Cambios Inmediatamente
+> Si cualquier diseño generado no te convence, no tienes que pedirle a la IA que lo borre: presiona **`Ctrl + Z`** directamente en **Roblox Studio** y el último lote se deshará instantáneamente. Si presionas **`Ctrl + Y`**, se restaurará.

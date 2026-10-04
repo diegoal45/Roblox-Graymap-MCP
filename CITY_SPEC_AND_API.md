@@ -244,3 +244,15 @@ Para mantener la jerarquía organizada y permitir el uso de `Ctrl + Z` de forma 
 4. **Fase 4 — Zona 5 (Centro - Barrio Intermedio):** Mercado central, avenidas intermedias y plazas públicas. Carpeta: `City/Midtown`.
 5. **Fase 5 — Zona 4 (Este - Downtown):** Banco Central (`set_hollow_box`), rascacielos graybox y zona financiera. Carpeta: `City/Downtown`.
 6. **Fase 6 — Zona 1 (Norte - Montaña y Favela):** Terrazas de montaña, zigzag de calles con cuñas, escaleras técnicas `TrussPart` y la base fortificada de la Pandilla A en `Y = 150`. Carpeta: `City/Favela`.
+
+---
+
+## 5. Instrucciones para Interactuar con OpenCode
+
+> [!IMPORTANT]
+> **No pegues los bloques JSON crudos en el chat de OpenCode.**
+> OpenCode es el agente que se encarga de estructurar y enviar el JSON al motor. Para pedirle que construya cualquiera de las fases, dale la orden en lenguaje natural en un **nuevo chat (`+`)**:
+>
+> * *"Usa build_structure para generar la Fase 1: Terreno Base de 4000x3600 y el Canal Sur."*
+> * *"Construye la Fase 2: Autopista horizontal en Y = 50 con rampas de acceso en cuña."*
+> * *"Genera el Banco Central en City/Downtown/Bank con set_hollow_box y la puerta de atraco 'Heist_Target'."*
