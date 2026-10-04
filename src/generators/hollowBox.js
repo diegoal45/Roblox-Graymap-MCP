@@ -73,6 +73,9 @@ local function buildHollowBox()
 
     local model = Instance.new("Model", current)
     model.Name = "${name}"
+    pcall(function()
+        model.LevelOfDetail = Enum.ModelLevelOfDetail.StreamingMesh
+    end)
 
     -- Asignar tags al modelo principal
     for _, t in ipairs(${tagsJson}) do
@@ -82,11 +85,16 @@ local function buildHollowBox()
         model:SetAttribute(k, v)
     end
 
-    local function makePart(pName, pSize, pCFrame, colorRgb, pMaterial)
+    local function makePart(pName, pSize, pCFrame, colorRgb, pMaterial, isCeiling)
         local p = Instance.new("Part", model)
         p.Name = pName
         p.Anchored = true
         p.CanCollide = true
+        p.CanTouch = false -- Performance Shield: desactiva eventos de colisión innecesarios
+        if isCeiling then
+            p.CanQuery = false
+            p.CastShadow = false
+        end
         p.TopSurface = Enum.TopSurfaceType.Smooth
         p.BottomSurface = Enum.BottomSurfaceType.Smooth
         p.Size = pSize
@@ -112,7 +120,7 @@ local function buildHollowBox()
     -- 2. Techo
     ${
       hasCeiling
-        ? `makePart("Ceiling", Vector3.new(${w}, 1, ${l}), CFrame.new(${cx}, ${cy} + ${h} + 0.5, ${cz}), cCol, "${material}")`
+        ? `makePart("Ceiling", Vector3.new(${w}, 1, ${l}), CFrame.new(${cx}, ${cy} + ${h} + 0.5, ${cz}), cCol, "${material}", true)`
         : ""
     }
 

@@ -2,22 +2,21 @@ import { snapPosition, snapSize } from "./grid.js";
 
 /**
  * Genera el script Luau optimizado para instanciar un lote (Batch) de decenas o cientos
- * de objetos de golpe en Roblox Studio, organizados en carpetas jerárquicas y con etiquetas (Tags)
- * y atributos de juego para mecánicas de pandillas/territorios/heists.
+ * de objetos de golpe en Roblox Studio, con PERFORMANCE SHIELD (CanTouch = false,
+ * optimización de sombras CastShadow y LOD StreamingMesh para 50+ jugadores).
  */
 export function generateBatchLuau({
   parts_list = [],
   defaultParent = "Graybox/City",
-  snapGrid = 4, // 0 = no snap, 4 u 8 = múltiplos estándar de Roblox
+  snapGrid = 4,
+  autoOptimize = true, // Performance Shield para mapas masivos
 }) {
-  // Pre-procesar y ajustar a rejilla si está habilitado
   const sanitizedList = parts_list.map((item, idx) => {
     let [x, y, z] = item.position || [0, 0, 0];
     let [sx, sy, sz] = item.size || [4, 4, 4];
 
     if (snapGrid && snapGrid > 0) {
       [x, y, z] = snapPosition([x, y, z], snapGrid, false);
-      // Solo ajustar en ancho y largo (X y Z) para no descalibrar alturas sutiles
       sx = snapSize(sx, snapGrid, 1);
       sz = snapSize(sz, snapGrid, 1);
     }
@@ -33,6 +32,7 @@ export function generateBatchLuau({
       transparency: item.transparency ?? 0,
       canCollide: item.canCollide ?? true,
       anchored: item.anchored ?? true,
+      castShadow: item.castShadow ?? (sy < 1.2 ? false : true),
       parent: item.parent || defaultParent,
       tags: Array.isArray(item.tags) ? item.tags : [],
       attributes: typeof item.attributes === "object" && item.attributes !== null ? item.attributes : {},
@@ -46,8 +46,8 @@ local HttpService = game:GetService("HttpService")
 local CollectionService = game:GetService("CollectionService")
 
 local batchData = HttpService:JSONDecode([==[${payloadJson}]==])
+local autoOpt = ${autoOptimize}
 
--- Cache de carpetas jerárquicas para no buscar repetidamente
 local folderCache = {}
 
 local function getOrCreateHierarchy(pathStr)
@@ -58,11 +58,19 @@ local function getOrCreateHierarchy(pathStr)
     local segments = string.split(pathStr, "/")
     local current = workspace
 
-    for _, segName in ipairs(segments) do
+    for i, segName in ipairs(segments) do
         if segName ~= "" then
             local nextFolder = current:FindFirstChild(segName)
             if not nextFolder then
-                nextFolder = Instance.new("Folder")
+                -- Si es el último segmento y parece un edificio, usar Model con LOD
+                if i == #segments and not segName:lower():find("folder") and not segName:lower():find("district") then
+                    nextFolder = Instance.new("Model")
+                    pcall(function()
+                        nextFolder.LevelOfDetail = Enum.ModelLevelOfDetail.StreamingMesh
+                    end)
+                else
+                    nextFolder = Instance.new("Folder")
+                end
                 nextFolder.Name = segName
                 nextFolder.Parent = current
             end
@@ -108,8 +116,18 @@ local function buildItem(data)
     instance.Transparency = data.transparency or 0
     instance.CanCollide = data.canCollide
     instance.Anchored = data.anchored
+    instance.CastShadow = data.castShadow
     instance.TopSurface = Enum.TopSurfaceType.Smooth
     instance.BottomSurface = Enum.BottomSurfaceType.Smooth
+
+    -- PERFORMANCE SHIELD: Poda de física para servidores de 50 jugadores
+    if autoOpt then
+        instance.CanTouch = false -- Ahorra listeners de eventos de contacto innecesarios
+        -- Si es un techo elevado (> 16 studs de alto), desactivar colisión para ahorrar broadphase
+        if data.pos[2] > 16 and (data.name:lower():find("ceiling") or data.name:lower():find("roof")) then
+            instance.CanQuery = false
+        end
+    end
 
     -- Asignación de Tags (CollectionService)
     if data.tags then
@@ -127,7 +145,6 @@ local function buildItem(data)
         end
     end
 
-    -- Organización por jerarquía
     local parentFolder = getOrCreateHierarchy(data.parent or "Graybox/City")
     instance.Parent = parentFolder
     return instance
