@@ -19,6 +19,8 @@ import { generateRoomLuau } from "./generators/room.js";
 import { generateStairsLuau } from "./generators/stairs.js";
 import { generateCoverLuau } from "./generators/cover.js";
 import { generateArenaLuau } from "./generators/arena.js";
+import { generatePropLuau } from "./generators/props.js";
+import { generateStreetLuau } from "./generators/street.js";
 
 // Iniciar servidor local HTTP que conecta con Roblox Studio
 startBridge();
@@ -26,7 +28,7 @@ startBridge();
 const server = new Server(
   {
     name: "roblox-graybox-mcp",
-    version: "2.0.0",
+    version: "3.0.0",
   },
   {
     capabilities: {
@@ -41,26 +43,75 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       {
         name: "check_studio_connection",
         description: "Comprueba si Roblox Studio está abierto y si el plugin GrayboxBridge está conectado al MCP.",
+        inputSchema: { type: "object", properties: {} },
+      },
+      {
+        name: "inspect_area",
+        description:
+          "CONCIENCIA ESPACIAL: Consulta qué objetos o modelos existen alrededor de un punto (X, Y, Z) en un radio específico. Devuelve nombres, distancias y dimensiones de los edificios vecinos para saber cuánto espacio libre queda antes de construir.",
         inputSchema: {
           type: "object",
-          properties: {},
+          properties: {
+            position: {
+              type: "array",
+              items: { type: "number" },
+              description: "[X, Y, Z] centro de la búsqueda",
+            },
+            radius: {
+              type: "number",
+              default: 50,
+              description: "Radio de búsqueda en studs",
+            },
+            max_results: {
+              type: "number",
+              default: 15,
+              description: "Cantidad máxima de objetos cercanos a reportar",
+            },
+          },
+          required: ["position"],
+        },
+      },
+      {
+        name: "raycast_query",
+        description:
+          "DETECCIÓN DE SUELO (RAYCAST): Dispara un rayo desde un origen hacia una dirección para consultar '¿Qué hay debajo o delante de este punto?'. Devuelve la altura exacta del suelo, material y normal de la superficie para asegurar que los edificios toquen el terreno sin flotar ni enterrarse.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            origin: {
+              type: "array",
+              items: { type: "number" },
+              description: "[X, Y, Z] punto de origen del rayo",
+            },
+            direction: {
+              type: "array",
+              items: { type: "number" },
+              default: [0, -1, 0],
+              description: "[DX, DY, DZ] vector unitario de dirección (defecto hacia abajo [0, -1, 0])",
+            },
+            distance: {
+              type: "number",
+              default: 150,
+              description: "Distancia máxima de alcance del rayo en studs",
+            },
+          },
+          required: ["origin"],
         },
       },
       {
         name: "get_workspace_layout",
         description:
-          "FEEDBACK LOOP: Lee la jerarquía, bounding boxes, posiciones y tags de objetos existentes en Workspace o en una subcarpeta (ej. 'Graybox/Downtown' o 'Favela'). Permite saber qué hay construido antes de generar nuevas partes para evitar solapamientos.",
+          "FEEDBACK LOOP: Lee la jerarquía, bounding boxes, posiciones y tags de objetos existentes en Workspace o en una subcarpeta (ej. 'City/Downtown').",
         inputSchema: {
           type: "object",
           properties: {
             folder_path: {
               type: "string",
-              description: "Ruta en Workspace a inspeccionar (ej: 'Graybox', 'Graybox/Downtown', 'Favela', o vacío para Workspace completo)",
-              default: "Graybox",
+              description: "Ruta en Workspace a inspeccionar (ej: 'City/Downtown' o 'Graybox')",
+              default: "City",
             },
             max_depth: {
               type: "number",
-              description: "Profundidad máxima de recursión en el árbol de instancias",
               default: 3,
             },
           },
@@ -69,21 +120,14 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       {
         name: "build_structure",
         description:
-          "BATCHING MASIVO: Instancia un lote completo de decenas o cientos de objetos (Bloques, Cuñas, Truss, Cilindros) en un solo mensaje de red con jerarquías (parent), ajuste a rejilla (snap to grid), tags de CollectionService y atributos de juego.",
+          "BATCHING MASIVO + PERFORMANCE SHIELD: Instancia un lote completo de decenas o cientos de objetos con poda automática de colisiones (CanTouch = false) y LOD StreamingMesh para 50+ jugadores sin lag.",
         inputSchema: {
           type: "object",
           properties: {
             action_name: { type: "string", default: "Build City District Batch" },
-            default_parent: {
-              type: "string",
-              description: "Carpeta jerárquica por defecto en Workspace (ej: 'City/Downtown/District_A' o 'Favela/Sector_1')",
-              default: "Graybox/City",
-            },
-            snap_grid: {
-              type: "number",
-              description: "Forzar posiciones y dimensiones X/Z a múltiplos de 4 u 8 studs (estándar Roblox)",
-              default: 4,
-            },
+            default_parent: { type: "string", default: "City/Downtown" },
+            snap_grid: { type: "number", default: 4 },
+            auto_optimize: { type: "boolean", default: true },
             parts_list: {
               type: "array",
               description: "Lista de objetos a construir en lote",
@@ -95,48 +139,18 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
                     enum: ["Block", "Wedge", "CornerWedge", "Truss", "Cylinder", "Sphere"],
                     default: "Block",
                   },
-                  name: { type: "string", default: "Building_Part" },
-                  position: {
-                    type: "array",
-                    items: { type: "number" },
-                    description: "[X, Y, Z] en studs",
-                  },
-                  size: {
-                    type: "array",
-                    items: { type: "number" },
-                    description: "[ancho X, alto Y, largo Z] en studs",
-                  },
-                  rotation: {
-                    type: "array",
-                    items: { type: "number" },
-                    description: "[RotX, RotY, RotZ] en grados",
-                  },
-                  color: {
-                    type: "array",
-                    items: { type: "number" },
-                    description: "[R, G, B] entre 0 y 255",
-                  },
-                  material: {
-                    type: "string",
-                    enum: ["SmoothPlastic", "Concrete", "Brick", "Metal", "CorrugatedMetal", "WoodPlanks", "Cobblestone", "Neon"],
-                    default: "SmoothPlastic",
-                  },
+                  name: { type: "string", default: "Part" },
+                  position: { type: "array", items: { type: "number" } },
+                  size: { type: "array", items: { type: "number" } },
+                  rotation: { type: "array", items: { type: "number" } },
+                  color: { type: "array", items: { type: "number" } },
+                  material: { type: "string", default: "SmoothPlastic" },
                   transparency: { type: "number", default: 0 },
                   canCollide: { type: "boolean", default: true },
                   anchored: { type: "boolean", default: true },
-                  parent: {
-                    type: "string",
-                    description: "Ruta de carpeta relativa o absoluta (ej: 'Favela_Territory_A/House_01')",
-                  },
-                  tags: {
-                    type: "array",
-                    items: { type: "string" },
-                    description: "Etiquetas de CollectionService (ej: ['Spawn_Coche', 'Zona_Captura', 'No_Escalable', 'Heist_Target'])",
-                  },
-                  attributes: {
-                    type: "object",
-                    description: "Diccionario de atributos de juego (ej: {'Territory': 'Ballas', 'Health': 500})",
-                  },
+                  parent: { type: "string" },
+                  tags: { type: "array", items: { type: "string" } },
+                  attributes: { type: "object" },
                 },
                 required: ["position", "size"],
               },
@@ -148,33 +162,22 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       {
         name: "set_hollow_box",
         description:
-          "EDIFICIO / HABITACIÓN HUECA: Crea automáticamente una estructura completa (suelo, techo y 4 paredes) en un solo comando paramétrico para interiores de Bancos, Talleres, Comisarías o Tiendas.",
+          "EDIFICIO PROFESIONAL CON DETALLES: Crea una estructura hueca completa con cornisas de tejado (parapeto 1.5 studs), zócalos exteriores, luz interior automática (PointLight cálida) y vanos de puerta transitables con dintel.",
         inputSchema: {
           type: "object",
           properties: {
-            name: { type: "string", default: "Bank_Building" },
-            position: {
-              type: "array",
-              items: { type: "number" },
-              description: "[X, Y, Z] del centro del suelo",
-            },
-            size: {
-              type: "array",
-              items: { type: "number" },
-              description: "[ancho X, alto Y, largo Z] en studs",
-              default: [40, 16, 40],
-            },
+            name: { type: "string", default: "Building" },
+            position: { type: "array", items: { type: "number" } },
+            size: { type: "array", items: { type: "number" }, default: [40, 16, 40] },
             wall_thickness: { type: "number", default: 1.5 },
             has_floor: { type: "boolean", default: true },
             has_ceiling: { type: "boolean", default: true },
-            parent: {
-              type: "string",
-              description: "Carpeta jerárquica (ej: 'Downtown/District_A/Bank')",
-              default: "Graybox/Downtown/Bank",
-            },
+            include_parapet: { type: "boolean", default: true, description: "Cornisa de tejado (1.5 studs) para cobertura en azotea" },
+            include_lighting: { type: "boolean", default: true, description: "Luz PointLight suave en el techo" },
+            include_baseboard: { type: "boolean", default: true, description: "Rodapié exterior de 0.6 studs" },
+            parent: { type: "string", default: "City/Downtown" },
             doors: {
               type: "array",
-              description: "Vanos de puerta con corte y dintel automático",
               items: {
                 type: "object",
                 properties: {
@@ -182,40 +185,78 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
                   width: { type: "number", default: 6 },
                   height: { type: "number", default: 9 },
                   offset: { type: "number", default: 0 },
-                  tag: { type: "string", description: "Tag para el vano (ej: 'Heist_Target' o 'Door_Front')" },
+                  tag: { type: "string" },
                 },
                 required: ["wall"],
               },
             },
-            tags: {
-              type: "array",
-              items: { type: "string" },
-              description: "Tags para el modelo del edificio",
-            },
-            attributes: {
-              type: "object",
-              description: "Atributos de juego (ej: {'Territory': 'Downtown', 'Robbable': true})",
-            },
+            tags: { type: "array", items: { type: "string" } },
+            attributes: { type: "object" },
             snap_grid: { type: "number", default: 4 },
           },
           required: ["position", "size"],
         },
       },
       {
+        name: "create_street",
+        description:
+          "VÍA URBANA COMPLETA: Genera una calle o avenida con asfalto rebajado, aceras peatonales elevadas a los costados, líneas viales centrales amarillas y farolas de calle (Street Lamps) con iluminación real.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            name: { type: "string", default: "Main_Avenue" },
+            start_position: { type: "array", items: { type: "number" }, description: "[X, Y, Z] inicio" },
+            end_position: { type: "array", items: { type: "number" }, description: "[X, Y, Z] fin" },
+            road_width: { type: "number", default: 24, description: "Ancho de calzada (24 studs = 2 carriles)" },
+            sidewalk_width: { type: "number", default: 6, description: "Ancho de acera a cada lado" },
+            has_lanes: { type: "boolean", default: true, description: "Líneas amarillas divisorias" },
+            has_sidewalks: { type: "boolean", default: true, description: "Aceras elevadas a los costados" },
+            has_lamps: { type: "boolean", default: true, description: "Farolas de calle con luces activas" },
+            lamp_interval: { type: "number", default: 48, description: "Separación en studs entre farolas" },
+            parent: { type: "string", default: "City/Streets" },
+          },
+          required: ["start_position", "end_position"],
+        },
+      },
+      {
+        name: "spawn_prop",
+        description:
+          "MOBILIARIO Y PROPS TÁCTICOS LOWPOLY: Genera muebles y atrezzo funcional para interiores de bancos, talleres y calles (counter, desk, shelf, dumpster, barrier, street_lamp, dummy).",
+        inputSchema: {
+          type: "object",
+          properties: {
+            type: {
+              type: "string",
+              enum: ["counter", "desk", "shelf", "dumpster", "barrier", "street_lamp", "dummy"],
+              description: "counter = mostrador recepción/tienda (3 studs), desk = escritorio oficina, shelf = estantería almacén (8 studs), dumpster = contenedor basura, barrier = barrera jersey concreto, street_lamp = farola calle, dummy = maniquí escala humana R15 (5 studs)",
+            },
+            name: { type: "string" },
+            position: { type: "array", items: { type: "number" } },
+            rotation_y: { type: "number", default: 0 },
+            length: { type: "number", default: 8, description: "Longitud para mostradores, estanterías o barreras" },
+            parent: { type: "string", default: "City/Props" },
+            tags: { type: "array", items: { type: "string" } },
+            attributes: { type: "object" },
+            snap_grid: { type: "number", default: 4 },
+          },
+          required: ["type", "position"],
+        },
+      },
+      {
         name: "spawn_wedge",
         description:
-          "RAMPAS Y CALLES EMPINADAS (WedgePart): Genera cuñas indispensables para rampas de autopistas, calles inclinadas de montaña y tejados.",
+          "RAMPAS Y CALLES EMPINADAS (WedgePart): Genera cuñas para rampas de autopistas, calles inclinadas y tejados.",
         inputSchema: {
           type: "object",
           properties: {
             name: { type: "string", default: "Highway_Ramp" },
-            position: { type: "array", items: { type: "number" }, description: "[X, Y, Z]" },
-            size: { type: "array", items: { type: "number" }, description: "[ancho X, alto Y, largo Z]" },
-            rotation: { type: "array", items: { type: "number" }, description: "[RotX, RotY, RotZ] en grados" },
+            position: { type: "array", items: { type: "number" } },
+            size: { type: "array", items: { type: "number" } },
+            rotation: { type: "array", items: { type: "number" } },
             color: { type: "array", items: { type: "number" }, default: [100, 100, 105] },
             material: { type: "string", default: "Concrete" },
-            parent: { type: "string", default: "Graybox/Highways" },
-            tags: { type: "array", items: { type: "string" }, default: ["Road_Ramp"] },
+            parent: { type: "string", default: "City/Highways" },
+            tags: { type: "array", items: { type: "string" } },
             attributes: { type: "object" },
             snap_grid: { type: "number", default: 4 },
           },
@@ -225,16 +266,16 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       {
         name: "spawn_truss",
         description:
-          "ESCALERAS TÉCNICAS (TrussPart): Genera andamios y escaleras verticales de cuadrícula escalables por el avatar de Roblox. Vitales para pasadizos rápidos de favela y salidas de emergencia.",
+          "ESCALERAS TÉCNICAS (TrussPart): Genera escaleras verticales escalables por el avatar.",
         inputSchema: {
           type: "object",
           properties: {
             name: { type: "string", default: "Favela_Ladder" },
-            position: { type: "array", items: { type: "number" }, description: "[X, Y, Z]" },
-            height: { type: "number", default: 16, description: "Altura vertical del truss" },
+            position: { type: "array", items: { type: "number" } },
+            height: { type: "number", default: 16 },
             rotation_y: { type: "number", default: 0 },
-            parent: { type: "string", default: "Graybox/Favela/Scaffolds" },
-            tags: { type: "array", items: { type: "string" }, default: ["Climbable_Truss"] },
+            parent: { type: "string", default: "City/Favela" },
+            tags: { type: "array", items: { type: "string" } },
             attributes: { type: "object" },
             snap_grid: { type: "number", default: 4 },
           },
@@ -242,33 +283,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
-        name: "add_tags_and_attributes",
-        description:
-          "ETIQUETADO EN MASA: Asigna tags de CollectionService y atributos de juego a instancias ya existentes en Roblox Studio por nombre o ruta de carpeta.",
-        inputSchema: {
-          type: "object",
-          properties: {
-            target_path: { type: "string", description: "Ruta en Workspace (ej: 'Favela_Territory_A' o 'Downtown/Bank')" },
-            tags: { type: "array", items: { type: "string" }, description: "Tags a añadir" },
-            attributes: { type: "object", description: "Atributos a asignar" },
-            recursive: { type: "boolean", default: true, description: "Si debe aplicarse a todos los hijos y partes dentro" },
-          },
-          required: ["target_path"],
-        },
-      },
-      {
-        name: "clear_folder",
-        description: "Elimina una carpeta específica de Workspace (ej: 'Graybox/Favela') o todo 'Graybox'.",
-        inputSchema: {
-          type: "object",
-          properties: {
-            folder_path: { type: "string", default: "Graybox", description: "Ruta de la carpeta a eliminar" },
-          },
-        },
-      },
-      {
         name: "create_stairs",
-        description: "Construye escaleras transitables por el avatar de Roblox (altura de peldaño <= 1.1 studs).",
+        description: "Construye escaleras peatonales transitables (<= 1.1 studs por peldaño).",
         inputSchema: {
           type: "object",
           properties: {
@@ -287,12 +303,36 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
-        name: "execute_raw_luau",
-        description: "Ejecuta cualquier código Luau arbitrario en Roblox Studio con soporte Undo/Redo (Ctrl+Z).",
+        name: "add_tags_and_attributes",
+        description: "Asigna tags de CollectionService y atributos a partes o modelos existentes en Studio.",
         inputSchema: {
           type: "object",
           properties: {
-            code: { type: "string", description: "Código Luau a ejecutar" },
+            target_path: { type: "string" },
+            tags: { type: "array", items: { type: "string" } },
+            attributes: { type: "object" },
+            recursive: { type: "boolean", default: true },
+          },
+          required: ["target_path"],
+        },
+      },
+      {
+        name: "clear_folder",
+        description: "Elimina una carpeta específica de Workspace o todo 'City' / 'Graybox'.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            folder_path: { type: "string", default: "City" },
+          },
+        },
+      },
+      {
+        name: "execute_raw_luau",
+        description: "Ejecuta cualquier código Luau arbitrario con soporte Undo/Redo (Ctrl+Z).",
+        inputSchema: {
+          type: "object",
+          properties: {
+            code: { type: "string" },
             actionName: { type: "string", default: "Custom Luau Execution" },
           },
           required: ["code"],
@@ -322,19 +362,61 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           content: [
             {
               type: "text",
-              text:
-                "🔴 Roblox Studio NO está conectado al bridge actualmente.\n" +
-                "1. Abre Roblox Studio.\n" +
-                "2. Confirma que el plugin 'Graybox City MCP' esté activo.\n" +
-                "3. Asegúrate de tener 'Allow HTTP Requests' en Game Settings > Security.",
+              text: "🔴 Roblox Studio NO está conectado al bridge actualmente en 127.0.0.1:30250.",
             },
           ],
         };
       }
     }
 
+    if (name === "inspect_area") {
+      const result = await sendToRoblox(
+        "",
+        "Inspect Area Query",
+        {
+          type: "inspect_area",
+          position: args.position,
+          radius: args.radius || 50,
+          max_results: args.max_results || 15,
+        },
+        20000
+      );
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `🔍 Inspección espacial en radio ${args.radius || 50} studs:\n\n\`\`\`json\n${JSON.stringify(result.data || {}, null, 2)}\n\`\`\``,
+          },
+        ],
+      };
+    }
+
+    if (name === "raycast_query") {
+      const result = await sendToRoblox(
+        "",
+        "Raycast Surface Query",
+        {
+          type: "raycast_query",
+          origin: args.origin,
+          direction: args.direction || [0, -1, 0],
+          distance: args.distance || 150,
+        },
+        20000
+      );
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `⚡ Resultado de Raycast:\n\n\`\`\`json\n${JSON.stringify(result.data || {}, null, 2)}\n\`\`\``,
+          },
+        ],
+      };
+    }
+
     if (name === "get_workspace_layout") {
-      const folderPath = args.folder_path || "Graybox";
+      const folderPath = args.folder_path || "City";
       const maxDepth = args.max_depth || 3;
 
       const result = await sendToRoblox(
@@ -348,12 +430,62 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         20000
       );
 
-      const layoutData = result.data || {};
       return {
         content: [
           {
             type: "text",
-            text: `📋 Layout de Workspace obtenido para '${folderPath}':\n\n\`\`\`json\n${JSON.stringify(layoutData, null, 2)}\n\`\`\``,
+            text: `📋 Layout de Workspace obtenido para '${folderPath}':\n\n\`\`\`json\n${JSON.stringify(result.data || {}, null, 2)}\n\`\`\``,
+          },
+        ],
+      };
+    }
+
+    if (name === "create_street") {
+      const luau = generateStreetLuau({
+        name: args.name || "Main_Avenue",
+        startPosition: args.start_position,
+        endPosition: args.end_position,
+        roadWidth: args.road_width ?? 24,
+        sidewalkWidth: args.sidewalk_width ?? 6,
+        hasLanes: args.has_lanes ?? true,
+        hasSidewalks: args.has_sidewalks ?? true,
+        hasLamps: args.has_lamps ?? true,
+        lampInterval: args.lamp_interval ?? 48,
+        parent: args.parent || "City/Streets",
+      });
+
+      await sendToRoblox(luau, `Create Street ${args.name || "Avenue"}`);
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `✅ Calle/Avenida '${args.name || "Main_Avenue"}' construida con asfalto, aceras elevadas, líneas viales y farolas automáticas.`,
+          },
+        ],
+      };
+    }
+
+    if (name === "spawn_prop") {
+      const luau = generatePropLuau({
+        type: args.type,
+        name: args.name,
+        position: args.position,
+        rotationY: args.rotation_y ?? 0,
+        length: args.length ?? 8,
+        parent: args.parent || "City/Props",
+        tags: args.tags || [],
+        attributes: args.attributes || {},
+        snapGrid: args.snap_grid ?? 4,
+      });
+
+      await sendToRoblox(luau, `Spawn Prop ${args.type}`);
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `✅ Prop táctico '${args.type}' colocado en (${args.position.join(", ")}) en '${args.parent || "City/Props"}'.`,
           },
         ],
       };
@@ -362,22 +494,24 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     if (name === "build_structure") {
       const partsList = args.parts_list || [];
       const snapGrid = args.snap_grid ?? 4;
-      const defaultParent = args.default_parent || "Graybox/City";
+      const defaultParent = args.default_parent || "City/Downtown";
       const actionName = args.action_name || `Build Batch (${partsList.length} parts)`;
+      const autoOptimize = args.auto_optimize ?? true;
 
       const luau = generateBatchLuau({
         parts_list: partsList,
         defaultParent,
         snapGrid,
+        autoOptimize,
       });
 
-      await sendToRoblox(luau, actionName, {}, 30000);
+      await sendToRoblox(luau, actionName, {}, 35000);
 
       return {
         content: [
           {
             type: "text",
-            text: `✅ Lote de ${partsList.length} objetos instanciado con éxito en Roblox Studio.\n- Jerarquía destino: '${defaultParent}'\n- Rejilla (Snap): ${snapGrid > 0 ? snapGrid + " studs" : "Desactivado"}\n- Soporte Ctrl+Z registrado como '${actionName}'.`,
+            text: `✅ Lote de ${partsList.length} objetos instanciado con éxito en Roblox Studio (Performance Shield y LOD activos).\n- Destino: '${defaultParent}'\n- Rejilla: ${snapGrid > 0 ? snapGrid + " studs" : "Desactivado"}.`,
           },
         ],
       };
@@ -385,14 +519,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     if (name === "set_hollow_box") {
       const luau = generateHollowBoxLuau({
-        name: args.name || "Building_Interior",
+        name: args.name || "Building",
         position: args.position,
         size: args.size,
         wallThickness: args.wall_thickness ?? 1.5,
         hasFloor: args.has_floor ?? true,
         hasCeiling: args.has_ceiling ?? true,
+        includeParapet: args.include_parapet ?? true,
+        includeLighting: args.include_lighting ?? true,
+        includeBaseboard: args.include_baseboard ?? true,
         doors: args.doors || [],
-        parent: args.parent || "Graybox/Downtown/Bank",
+        parent: args.parent || "City/Downtown",
         tags: args.tags || [],
         attributes: args.attributes || {},
         snapGrid: args.snap_grid ?? 4,
@@ -404,7 +541,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         content: [
           {
             type: "text",
-            text: `✅ Edificio hueco '${args.name || "Building"}' (${args.size ? args.size.join("x") : ""} studs) construido en '${args.parent || "Graybox"}' con suelo, techo, paredes y ${args.doors ? args.doors.length : 0} vanos de puerta.`,
+            text: `✅ Edificio '${args.name || "Building"}' (${args.size ? args.size.join("x") : ""} studs) construido en '${args.parent || "City"}' con cornisas de azotea, luz interior en el techo, zócalo y vanos de puerta transitables.`,
           },
         ],
       };
@@ -418,7 +555,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         rotation: args.rotation || [0, 0, 0],
         color: args.color || [100, 100, 105],
         material: args.material || "Concrete",
-        parent: args.parent || "Graybox/Highways",
+        parent: args.parent || "City/Highways",
         tags: args.tags || ["Road_Ramp"],
         attributes: args.attributes || {},
         snapGrid: args.snap_grid ?? 4,
@@ -430,7 +567,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         content: [
           {
             type: "text",
-            text: `✅ Cuña/Rampa (WedgePart) '${args.name || "Highway_Ramp"}' generada en '${args.parent || "Graybox/Highways"}'.`,
+            text: `✅ Cuña/Rampa (WedgePart) '${args.name || "Highway_Ramp"}' generada en '${args.parent || "City/Highways"}'.`,
           },
         ],
       };
@@ -442,7 +579,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         position: args.position,
         height: args.height ?? 16,
         rotationY: args.rotation_y ?? 0,
-        parent: args.parent || "Graybox/Favela/Scaffolds",
+        parent: args.parent || "City/Favela",
         tags: args.tags || ["Climbable_Truss"],
         attributes: args.attributes || {},
         snapGrid: args.snap_grid ?? 4,
@@ -454,7 +591,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         content: [
           {
             type: "text",
-            text: `✅ Escalera técnica (TrussPart) de ${args.height ?? 16} studs generada en '${args.parent || "Graybox/Favela"}'.`,
+            text: `✅ Escalera técnica (TrussPart) de ${args.height ?? 16} studs generada en '${args.parent || "City/Favela"}'.`,
           },
         ],
       };
@@ -494,7 +631,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
                 end
             end
         else
-            error("No se encontró el objetivo '${targetPath}' en Workspace.")
+            error("No se encontró '${targetPath}' en Workspace.")
         end
       `;
 
@@ -504,14 +641,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         content: [
           {
             type: "text",
-            text: `✅ Tags [${(args.tags || []).join(", ")}] y atributos asignados a '${targetPath}' exitosamente.`,
+            text: `✅ Tags y atributos asignados a '${targetPath}' exitosamente.`,
           },
         ],
       };
     }
 
     if (name === "clear_folder") {
-      const folderPath = args.folder_path || "Graybox";
+      const folderPath = args.folder_path || "City";
       const luau = `
         local segments = string.split("${folderPath}", "/")
         local current = workspace

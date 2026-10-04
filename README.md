@@ -77,13 +77,17 @@ Mediante `get_workspace_layout()`, OpenCode puede inspeccionar las partes y mode
 | Herramienta | Parámetros Principales | Descripción |
 | :--- | :--- | :--- |
 | `check_studio_connection` | Ninguno | Comprueba si Roblox Studio y el plugin están conectados y activos. |
+| `inspect_area` | `position`, `radius`, `max_results` | **Conciencia Espacial:** Consulta qué objetos existen alrededor de un punto para medir el espacio libre antes de construir. |
+| `raycast_query` | `origin`, `direction`, `distance` | **Detección de Suelo (Raycast):** Mide la altura exacta del terreno, inclinación y material para asentar edificios sin que floten. |
 | `get_workspace_layout` | `folder_path`, `max_depth` | **Feedback Loop:** Lee la jerarquía, bounding boxes, posiciones y tags de objetos existentes en Studio. |
-| `build_structure` | `parts_list`, `default_parent`, `snap_grid`, `action_name` | **Batching Masivo:** Instancia decenas o cientos de objetos (Bloques, Cuñas, Truss, Cilindros) en una sola llamada. |
-| `set_hollow_box` | `name`, `position`, `size`, `parent`, `doors`, `tags`, `attributes` | **Estructura Hueca:** Construye una habitación o edificio completo con suelo, techo, 4 paredes y vanos de puerta transitables. |
-| `spawn_wedge` | `name`, `position`, `size`, `rotation`, `parent`, `tags`, `attributes` | **Rampas / Cuñas:** Genera cuñas para rampas vehiculares, techos inclinados o pendientes. |
-| `spawn_truss` | `name`, `position`, `height`, `parent`, `tags`, `attributes` | **Escaleras Técnicas:** Genera escaleras verticales escalables por el avatar. |
+| `create_street` | `start_position`, `end_position`, `road_width`, `has_lamps` | **Vía Urbana Completa:** Genera una calle con calzada de asfalto, aceras elevadas, líneas viales y farolas con luz real. |
+| `spawn_prop` | `type`, `position`, `rotation_y`, `length`, `parent` | **Mobiliario Lowpoly:** Genera muebles y atrezzo táctico (`counter`, `desk`, `shelf`, `dumpster`, `barrier`, `street_lamp`, `dummy`). |
+| `build_structure` | `parts_list`, `default_parent`, `snap_grid`, `auto_optimize` | **Batching Masivo + Shield:** Instancia decenas o cientos de objetos con poda de colisiones (`CanTouch = false`) y LOD `StreamingMesh`. |
+| `set_hollow_box` | `name`, `position`, `size`, `doors`, `include_parapet`, `include_lighting` | **Estructura Hueca Pro:** Construye un edificio completo con cornisas de azotea (parapeto 1.5 st), luz interior en techo, zócalo y vanos. |
+| `spawn_wedge` | `name`, `position`, `size`, `rotation`, `parent` | **Rampas / Cuñas:** Genera cuñas para rampas vehiculares, techos inclinados o pendientes de montaña. |
+| `spawn_truss` | `name`, `position`, `height`, `parent` | **Escaleras Técnicas:** Genera escaleras verticales escalables por el avatar de Roblox. |
+| `create_stairs` | `startX`, `startY`, `startZ`, `width`, `totalHeight`, `direction` | Construye escaleras peatonales fluidas ($\le 1.1\text{ studs}$ por peldaño). |
 | `add_tags_and_attributes` | `target_path`, `tags`, `attributes`, `recursive` | Asigna tags de CollectionService y atributos a partes o modelos existentes en Studio. |
-| `create_stairs` | `startX`, `startY`, `startZ`, `width`, `totalHeight`, `direction` | Construye escaleras peatonales transitables ($\le 1.1\text{ studs}$ por peldaño). |
 | `clear_folder` | `folder_path` | Elimina una carpeta específica en Workspace o todo `Graybox`. |
 | `execute_raw_luau` | `code`, `actionName` | Ejecuta Luau arbitrario con soporte completo de Undo/Redo (`Ctrl + Z`). |
 

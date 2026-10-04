@@ -339,7 +339,7 @@ task.spawn(function()
                     end)
 
                     if okDecode and cmd and cmd.id then
-                        -- Caso A: Lectura (Feedback Loop)
+                        -- Caso A1: Lectura de Jerarquía (get_layout)
                         if cmd.type == "get_layout" then
                             addLog("🔍 Feedback Loop: Leyendo " .. tostring(cmd.folder_path), Color3.fromRGB(100, 180, 255))
                             local target = resolvePath(cmd.folder_path)
@@ -357,6 +357,96 @@ task.spawn(function()
                                     Method = "POST",
                                     Headers = { ["Content-Type"] = "application/json" },
                                     Body = HttpService:JSONEncode({ id = cmd.id, success = true, data = responseData }),
+                                })
+                            end)
+
+                        -- Caso A2: Conciencia Espacial por Radio (inspect_area)
+                        elseif cmd.type == "inspect_area" then
+                            local center = Vector3.new(cmd.position[1] or 0, cmd.position[2] or 0, cmd.position[3] or 0)
+                            local radius = cmd.radius or 50
+                            local maxResults = cmd.max_results or 15
+                            addLog(string.format("🔍 Inspección r=%d en (%.0f, %.0f, %.0f)", radius, center.X, center.Y, center.Z), Color3.fromRGB(100, 180, 255))
+
+                            local overlapParams = OverlapParams.new()
+                            overlapParams.FilterType = Enum.RaycastFilterType.Exclude
+                            overlapParams.FilterDescendantsInstances = {}
+
+                            local parts = workspace:GetPartBoundsInRadius(center, radius, overlapParams)
+                            local visited = {}
+                            local nearby = {}
+
+                            for _, p in ipairs(parts) do
+                                if #nearby >= maxResults then break end
+                                local rootObj = p:FindFirstAncestorOfClass("Model") or p
+                                if rootObj ~= workspace and not rootObj:IsA("Workspace") and not visited[rootObj] then
+                                    visited[rootObj] = true
+                                    local pos, sz
+                                    if rootObj:IsA("Model") then
+                                        local cf, s = rootObj:GetBoundingBox()
+                                        pos = { math.round(cf.Position.X*10)/10, math.round(cf.Position.Y*10)/10, math.round(cf.Position.Z*10)/10 }
+                                        sz = { math.round(s.X*10)/10, math.round(s.Y*10)/10, math.round(s.Z*10)/10 }
+                                    else
+                                        pos = { math.round(rootObj.Position.X*10)/10, math.round(rootObj.Position.Y*10)/10, math.round(rootObj.Position.Z*10)/10 }
+                                        sz = { math.round(rootObj.Size.X*10)/10, math.round(rootObj.Size.Y*10)/10, math.round(rootObj.Size.Z*10)/10 }
+                                    end
+                                    local dist = math.round((Vector3.new(pos[1], pos[2], pos[3]) - center).Magnitude * 10) / 10
+                                    table.insert(nearby, {
+                                        name = rootObj.Name,
+                                        className = rootObj.ClassName,
+                                        distance = dist,
+                                        position = pos,
+                                        size = sz,
+                                        tags = CollectionService:GetTags(rootObj)
+                                    })
+                                end
+                            end
+
+                            pcall(function()
+                                HttpService:RequestAsync({
+                                    Url = BRIDGE_URL .. "/response",
+                                    Method = "POST",
+                                    Headers = { ["Content-Type"] = "application/json" },
+                                    Body = HttpService:JSONEncode({ id = cmd.id, success = true, data = { center = {center.X, center.Y, center.Z}, radius = radius, count = #nearby, nearby = nearby } }),
+                                })
+                            end)
+
+                        -- Caso A3: Detección de Suelo y Superficies (raycast_query)
+                        elseif cmd.type == "raycast_query" then
+                            local origin = Vector3.new(cmd.origin[1] or 0, cmd.origin[2] or 0, cmd.origin[3] or 0)
+                            local dir = Vector3.new(cmd.direction[1] or 0, cmd.direction[2] or -1, cmd.direction[3] or 0).Unit
+                            local dist = cmd.distance or 150
+                            addLog(string.format("⚡ Raycast dist=%d hacia (%.1f, %.1f, %.1f)", dist, dir.X, dir.Y, dir.Z), Color3.fromRGB(240, 180, 50))
+
+                            local params = RaycastParams.new()
+                            params.FilterType = Enum.RaycastFilterType.Exclude
+                            params.FilterDescendantsInstances = {}
+
+                            local hit = workspace:Raycast(origin, dir * dist, params)
+                            local hitData = {}
+
+                            if hit then
+                                hitData = {
+                                    hit = true,
+                                    position = { math.round(hit.Position.X*10)/10, math.round(hit.Position.Y*10)/10, math.round(hit.Position.Z*10)/10 },
+                                    normal = { math.round(hit.Normal.X*100)/100, math.round(hit.Normal.Y*100)/100, math.round(hit.Normal.Z*100)/100 },
+                                    distance = math.round(hit.Distance*10)/10,
+                                    material = hit.Material.Name,
+                                    instanceName = hit.Instance.Name,
+                                    instancePath = hit.Instance:GetFullName(),
+                                }
+                            else
+                                hitData = {
+                                    hit = false,
+                                    message = "No se detectó ningún obstáculo o suelo dentro de " .. tostring(dist) .. " studs.",
+                                }
+                            end
+
+                            pcall(function()
+                                HttpService:RequestAsync({
+                                    Url = BRIDGE_URL .. "/response",
+                                    Method = "POST",
+                                    Headers = { ["Content-Type"] = "application/json" },
+                                    Body = HttpService:JSONEncode({ id = cmd.id, success = true, data = hitData }),
                                 })
                             end)
 

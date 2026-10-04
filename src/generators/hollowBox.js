@@ -2,8 +2,11 @@ import { PALETTE } from "./palette.js";
 import { snapPosition, snapSize } from "./grid.js";
 
 /**
- * Genera una caja hueca completa (suelo, techo y 4 paredes) en una sola operación paramétrica.
- * Ideal para interiores de edificios urbanos (Banco, Taller, Comisaría, Tiendas).
+ * Genera una estructura hueca completa (suelo, techo y 4 paredes) con:
+ * - Parapet / Cornisa en el tejado (borde de 1.5 studs para cobertura y estética)
+ * - Iluminación interior automática con PointLight suave
+ * - Rodapié / Zócalo exterior de 0.6 studs
+ * - Soporte LOD StreamingMesh
  */
 export function generateHollowBoxLuau({
   name = "Building_Interior",
@@ -12,6 +15,9 @@ export function generateHollowBoxLuau({
   wallThickness = 1.5,
   hasFloor = true,
   hasCeiling = true,
+  includeParapet = true,   // Cornisa superior en el tejado
+  includeLighting = true,  // Foco de luz en el techo
+  includeBaseboard = true, // Zócalo inferior
   doors = [], // ej: [{ wall: "North", width: 6, height: 9, offset: 0, tag: "Heist_Entrance" }]
   parent = "Graybox/Downtown/Bank",
   tags = [],
@@ -56,7 +62,6 @@ export function generateHollowBoxLuau({
 local CollectionService = game:GetService("CollectionService")
 
 local function buildHollowBox()
-    -- Resolver jerarquía de carpetas
     local segments = string.split("${parent}", "/")
     local current = workspace
     for _, seg in ipairs(segments) do
@@ -77,7 +82,6 @@ local function buildHollowBox()
         model.LevelOfDetail = Enum.ModelLevelOfDetail.StreamingMesh
     end)
 
-    -- Asignar tags al modelo principal
     for _, t in ipairs(${tagsJson}) do
         CollectionService:AddTag(model, t)
     end
@@ -90,7 +94,7 @@ local function buildHollowBox()
         p.Name = pName
         p.Anchored = true
         p.CanCollide = true
-        p.CanTouch = false -- Performance Shield: desactiva eventos de colisión innecesarios
+        p.CanTouch = false
         if isCeiling then
             p.CanQuery = false
             p.CastShadow = false
@@ -117,14 +121,56 @@ local function buildHollowBox()
         : ""
     }
 
-    -- 2. Techo
+    -- 2. Techo con Luz Interior
     ${
       hasCeiling
-        ? `makePart("Ceiling", Vector3.new(${w}, 1, ${l}), CFrame.new(${cx}, ${cy} + ${h} + 0.5, ${cz}), cCol, "${material}", true)`
+        ? `
+    local ceiling = makePart("Ceiling", Vector3.new(${w}, 1, ${l}), CFrame.new(${cx}, ${cy} + ${h} + 0.5, ${cz}), cCol, "${material}", true)
+    ${
+      includeLighting
+        ? `
+    local interiorLight = Instance.new("PointLight", ceiling)
+    interiorLight.Name = "Interior_Light"
+    interiorLight.Color = Color3.fromRGB(255, 245, 225)
+    interiorLight.Brightness = 1.6
+    interiorLight.Range = math.max(${w}, ${l}) * 0.75
+    interiorLight.Shadows = true
+    `
+        : ""
+    }
+    `
         : ""
     }
 
-    -- 3. Paredes eje Z (North / South)
+    -- 3. Cornisa / Parapeto en el tejado (1.5 studs de alto para cobertura en azotea)
+    ${
+      includeParapet && hasCeiling
+        ? `
+    local pCol = {140, 140, 145}
+    local topY = ${cy} + ${h} + 1 + 0.75
+    makePart("Parapet_N", Vector3.new(${w}, 1.5, 0.8), CFrame.new(${cx}, topY, ${cz} - ${halfL} + 0.4), pCol, "Concrete")
+    makePart("Parapet_S", Vector3.new(${w}, 1.5, 0.8), CFrame.new(${cx}, topY, ${cz} + ${halfL} - 0.4), pCol, "Concrete")
+    makePart("Parapet_W", Vector3.new(0.8, 1.5, ${l}), CFrame.new(${cx} - ${halfW} + 0.4, topY, ${cz}), pCol, "Concrete")
+    makePart("Parapet_E", Vector3.new(0.8, 1.5, ${l}), CFrame.new(${cx} + ${halfW} - 0.4, topY, ${cz}), pCol, "Concrete")
+    `
+        : ""
+    }
+
+    -- 4. Rodapié / Zócalo exterior (0.6 studs de relieve)
+    ${
+      includeBaseboard
+        ? `
+    local bCol = {60, 60, 65}
+    local baseY = ${cy} + 0.3
+    makePart("Baseboard_N", Vector3.new(${w} + 0.6, 0.6, 0.3), CFrame.new(${cx}, baseY, ${cz} - ${halfL} - 0.15), bCol, "SmoothPlastic", false)
+    makePart("Baseboard_S", Vector3.new(${w} + 0.6, 0.6, 0.3), CFrame.new(${cx}, baseY, ${cz} + ${halfL} + 0.15), bCol, "SmoothPlastic", false)
+    makePart("Baseboard_W", Vector3.new(0.3, 0.6, ${l} + 0.6), CFrame.new(${cx} - ${halfW} - 0.15, baseY, ${cz}), bCol, "SmoothPlastic", false)
+    makePart("Baseboard_E", Vector3.new(0.3, 0.6, ${l} + 0.6), CFrame.new(${cx} + ${halfW} + 0.15, baseY, ${cz}), bCol, "SmoothPlastic", false)
+    `
+        : ""
+    }
+
+    -- 5. Paredes eje Z (North / South)
     local function buildWallZ(wallName, centerZ, door)
         if not door then
             makePart(wallName, Vector3.new(${w}, ${h}, ${wallThickness}), CFrame.new(${cx}, ${cy} + ${halfH}, centerZ), wCol)
@@ -154,7 +200,7 @@ local function buildHollowBox()
         end
     end
 
-    -- 4. Paredes eje X (West / East)
+    -- 6. Paredes eje X (West / East)
     local function buildWallX(wallName, centerX, door)
         if not door then
             makePart(wallName, Vector3.new(${wallThickness}, ${h}, ${l}), CFrame.new(centerX, ${cy} + ${halfH}, ${cz}), wCol)
