@@ -708,6 +708,208 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
+        name: "generate_district",
+        description:
+          "GENERADOR URBANO MACRO AAA: Genera una ciudad o distrito completo con calzadas de asfalto, bordillos de granito, pasos de cebra, aceras peatonales elevadas, subdivisión de manzanas en parcelas densas (sin huecos aleatorios), rascacielos/edificios multinivel con fachadas en relieve 3D, escaparates comerciales con toldos, mobiliario urbano (farolas con sombras, árboles en alcorques, bocas de incendio) y nivelado automático de terreno.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            name: { type: "string", default: "Downtown_District" },
+            center: {
+              type: "array",
+              items: { type: "number" },
+              default: [0, 0],
+              description: "[X, Z] centro de la manzana/distrito",
+            },
+            size: {
+              type: "array",
+              items: { type: "number" },
+              default: [240, 240],
+              description: "[ancho X, largo Z] dimensiones en studs",
+            },
+            style: {
+              type: "string",
+              enum: [
+                "modern_downtown",
+                "classic_brick",
+                "cyberpunk",
+                "industrial",
+                "favela",
+              ],
+              default: "modern_downtown",
+              description: "Estilo arquitectónico PBR y paleta visual",
+            },
+            density: {
+              type: "string",
+              enum: ["high", "medium", "low", "mixed"],
+              default: "high",
+              description: "Densidad y altura de los edificios (high: 8-18 pisos, medium: 4-8 pisos, low: 2-4 pisos, mixed: rascacielos con casas)",
+            },
+            street_width: {
+              type: "number",
+              default: 28,
+              description: "Ancho de las calzadas en studs",
+            },
+            sidewalk_width: {
+              type: "number",
+              default: 8,
+              description: "Ancho de acera peatonal en studs",
+            },
+            seed: {
+              type: "number",
+              default: 54321,
+              description: "Semilla determinista para variar colores de fachadas, toldos y alturas",
+            },
+            has_furniture: {
+              type: "boolean",
+              default: true,
+              description: "Incluir farolas con sombras, árboles en alcorques y bocas de incendio",
+            },
+            align_to_terrain: {
+              type: "boolean",
+              default: true,
+              description: "Nivela y cimenta automáticamente el terreno bajo el distrito para evitar que flote",
+            },
+            parent: {
+              type: "string",
+              default: "City/Districts",
+              description: "Carpeta de destino en Workspace",
+            },
+          },
+        },
+      },
+      {
+        name: "build_detailed_structure",
+        description:
+          "EDIFICIO ARQUITECTÓNICO MULTINIVEL AAA: Construye un edificio de alta fidelidad con zócalo plinto antisuspensión, planta baja comercial (escaparates de suelo a techo, portal remetido, toldos a 45° con WedgePart, rótulos comerciales iluminados), pisos superiores con cornisas divisorias, pilastras en relieve 3D, ventanas modulares con alféizar e iluminación interior realista, y azotea habitable con parapeto táctico, caseta de ascensor, HVAC, tanque de agua cilíndrico y antena con baliza roja.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            name: { type: "string", default: "Detailed_Building" },
+            position: {
+              type: "array",
+              items: { type: "number" },
+              description: "[X, Y, Z] posición central del edificio en la base",
+            },
+            footprint: {
+              type: "array",
+              items: { type: "number" },
+              default: [40, 40],
+              description: "[ancho X, fondo Z] huella en studs",
+            },
+            floors: {
+              type: "number",
+              default: 5,
+              description: "Cantidad de pisos (cada piso añade 10 studs de altura)",
+            },
+            style: {
+              type: "string",
+              enum: [
+                "modern_downtown",
+                "classic_brick",
+                "cyberpunk",
+                "industrial",
+                "favela",
+              ],
+              default: "modern_downtown",
+            },
+            seed: {
+              type: "number",
+              default: 1234,
+              description: "Semilla para alternar colores de fachada, toldos y ventanas iluminadas",
+            },
+            has_roof_props: {
+              type: "boolean",
+              default: true,
+              description: "Incluir caseta de ascensor, HVAC, tanque de agua y antena de telecomunicaciones",
+            },
+            parent: {
+              type: "string",
+              default: "City/Downtown",
+            },
+          },
+          required: ["position"],
+        },
+      },
+      {
+        name: "setup_environment",
+        description:
+          "ATMÓSFERA Y POST-PROCESADO CINEMÁTICO: Configura iluminación de última generación Future Lighting, sombras globales suaves, atmósfera volumétrica (Atmosphere con densidad y niebla de color), efectos de post-procesamiento (BloomEffect, ColorCorrectionEffect, SunRaysEffect) y hora del día para transformar la estética del mapa a calidad AAA.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            preset: {
+              type: "string",
+              enum: [
+                "cyberpunk_night",
+                "golden_hour",
+                "overcast_fog",
+                "sunny_noon",
+                "rainy_noir",
+              ],
+              default: "golden_hour",
+              description: "Preset atmosférico cinemático",
+            },
+            clock_time: {
+              type: "number",
+              description: "Hora del día en Roblox (0 a 24). Si se omite, usa la hora óptima del preset.",
+            },
+            enable_future_lighting: {
+              type: "boolean",
+              default: true,
+              description: "Activa Technology = Future para sombras en tiempo real",
+            },
+            shadow_softness: {
+              type: "number",
+              default: 0.2,
+              description: "Suavizado de sombras proyectadas",
+            },
+          },
+        },
+      },
+      {
+        name: "populate_street_furniture",
+        description:
+          "DRESSING Y MOBILIARIO URBANO DE ACERAS: Puebla las aceras de una calle o avenida con farolas metálicas con iluminación real y sombras, árboles frondosos en alcorques de fundición, bocas de incendio, bancos públicos peatonales y papeleras de calle.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            center: {
+              type: "array",
+              items: { type: "number" },
+              description: "[X, Y, Z] centro del tramo",
+            },
+            length: {
+              type: "number",
+              default: 120,
+              description: "Longitud del tramo en studs",
+            },
+            orientation: {
+              type: "string",
+              enum: ["Z", "X"],
+              default: "Z",
+              description: "Orientación del eje de la calle ('Z' para calle Norte-Sur, 'X' para Este-Oeste)",
+            },
+            sidewalk_offset: {
+              type: "number",
+              default: 16,
+              description: "Distancia desde el eje central de la calle hasta las aceras",
+            },
+            interval: {
+              type: "number",
+              default: 40,
+              description: "Separación entre elementos de mobiliario en studs",
+            },
+            include_trees: { type: "boolean", default: true },
+            include_lamps: { type: "boolean", default: true },
+            include_benches: { type: "boolean", default: true },
+            include_hydrants: { type: "boolean", default: true },
+            parent: { type: "string", default: "City/Props" },
+          },
+          required: ["center"],
+        },
+      },
+      {
         name: "execute_raw_luau",
         description: "Ejecuta cualquier código Luau arbitrario con soporte Undo/Redo (Ctrl+Z).",
         inputSchema: {
@@ -1239,6 +1441,107 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           {
             type: "text",
             text: `🌊 Propiedades cinemáticas de agua configuradas:\n- Color: RGB(${(args.color || [40, 120, 160]).join(", ")})\n- Olas: tamaño ${args.wave_size ?? 0.25}, velocidad ${args.wave_speed ?? 12}\n- Reflectancia: ${args.reflectance ?? 0.5} | Transparencia: ${args.transparency ?? 0.6}.`,
+          },
+        ],
+      };
+    }
+
+    if (name === "generate_district") {
+      const luau = generateDistrictLuau({
+        name: args.name || "Downtown_District",
+        center: args.center || [0, 0],
+        size: args.size || [240, 240],
+        style: args.style || "modern_downtown",
+        density: args.density || "high",
+        streetWidth: args.street_width ?? 28,
+        sidewalkWidth: args.sidewalk_width ?? 8,
+        seed: args.seed ?? 54321,
+        hasFurniture: args.has_furniture ?? true,
+        alignToTerrain: args.align_to_terrain ?? true,
+        parent: args.parent || "City/Districts",
+      });
+
+      await sendToRoblox(luau, `Generate AAA District (${args.name || "Downtown"})`, {}, 60000);
+      stats = { district: args.name || "Downtown_District", style: args.style || "modern_downtown", size: args.size || [240, 240] };
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `🏙️ Distrito Urbano AAA '${args.name || "Downtown_District"}' generado exitosamente:\n- Estilo: ${args.style || "modern_downtown"} (Densidad: ${args.density || "high"})\n- Dimensiones: ${args.size ? args.size.join("x") : "240x240"} studs en centro [${(args.center || [0, 0]).join(", ")}]\n- Calzadas de asfalto, bordillos de granito y pasos de cebra peatonales integrados.\n- Subdivisión en parcelas compactas sin huecos muertos y fachadas 3D con escaparates.\n- Mobiliario urbano desplegado: ${args.has_furniture !== false ? "Farolas con sombras, árboles y bocas de incendio" : "Desactivado"}.\n- Terreno nivelado automáticamente: ${args.align_to_terrain !== false ? "Sí" : "No"}.`,
+          },
+        ],
+      };
+    }
+
+    if (name === "build_detailed_structure") {
+      const luau = generateDetailedBuildingLuau({
+        name: args.name || "Detailed_Building",
+        position: args.position,
+        footprint: args.footprint || [40, 40],
+        floors: args.floors ?? 5,
+        style: args.style || "modern_downtown",
+        seed: args.seed ?? 1234,
+        hasRoofProps: args.has_roof_props ?? true,
+        parent: args.parent || "City/Downtown",
+      });
+
+      await sendToRoblox(luau, `Build Detailed Structure (${args.name || "Building"})`, {}, 30000);
+      stats = { building: args.name || "Detailed_Building", floors: args.floors ?? 5, style: args.style || "modern_downtown" };
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `🏛️ Edificio Arquitectónico AAA '${args.name || "Detailed_Building"}' construido exitosamente:\n- Ubicación: [${args.position.join(", ")}]\n- Huella: ${args.footprint ? args.footprint.join("x") : "40x40"} studs | Pisos: ${args.floors ?? 5} niveles\n- Estilo: ${args.style || "modern_downtown"}\n- Planta baja comercial con escaparates, toldos y portal remetido.\n- Pisos superiores con ventanas 3D con alféizar e iluminación interior realista.\n- Azotea con caseta de ascensor, HVAC, tanque de agua cilíndrico y antena con baliza roja.`,
+          },
+        ],
+      };
+    }
+
+    if (name === "setup_environment") {
+      const luau = generateEnvironmentLuau({
+        preset: args.preset || "golden_hour",
+        clockTime: args.clock_time,
+        enableFutureLighting: args.enable_future_lighting ?? true,
+        shadowSoftness: args.shadow_softness ?? 0.2,
+      });
+
+      await sendToRoblox(luau, `Setup Environment (${args.preset || "golden_hour"})`, {}, 15000);
+      stats = { preset: args.preset || "golden_hour" };
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `🌅 Atmósfera Cinemática y Post-Procesado aplicado exitosamente:\n- Preset: ${args.preset || "golden_hour"}\n- Iluminación: Future Lighting con sombras suaves (Softness: ${args.shadow_softness ?? 0.2})\n- Efectos inyectados: Atmosphere volumétrica, BloomEffect, ColorCorrectionEffect y SunRaysEffect.`,
+          },
+        ],
+      };
+    }
+
+    if (name === "populate_street_furniture") {
+      const luau = generateStreetFurnitureLuau({
+        center: args.center,
+        length: args.length ?? 120,
+        orientation: args.orientation || "Z",
+        sidewalkOffset: args.sidewalk_offset ?? 16,
+        interval: args.interval ?? 40,
+        includeTrees: args.include_trees ?? true,
+        includeLamps: args.include_lamps ?? true,
+        includeBenches: args.include_benches ?? true,
+        includeHydrants: args.include_hydrants ?? true,
+        parent: args.parent || "City/Props",
+      });
+
+      await sendToRoblox(luau, "Populate Street Furniture", {}, 25000);
+      stats = { length: args.length ?? 120, orientation: args.orientation || "Z" };
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `🌳 Mobiliario urbano desplegado a lo largo de ${args.length ?? 120} studs en eje ${args.orientation || "Z"}:\n- Farolas con sombras y luz real\n- Árboles en alcorques de fundición\n- Bancos públicos, papeleras y bocas de incendio.`,
           },
         ],
       };

@@ -95,7 +95,10 @@ Mediante `get_workspace_layout()`, OpenCode puede inspeccionar las partes y mode
 | `shape_terrain` | `shape`, `operation`, `position`, `size`, `radius`, `rotation`, `material` | **Esculpido Paramétrico:** Inserta o sustrae primitivas de volumen (`Block`, `Ball`, `Cylinder`, `Wedge`) con adición de material o excavación con `Air`. |
 | `paint_terrain_material` | `mode`, `center`, `size`, `target_material`, `source_material`, `region_bounds` | **Pintor de Materiales:** Pinta cajas/esferas o ejecuta sustitución nativa `Terrain:ReplaceMaterial` (ej: cambiar todo `Grass` por `Snow` o `Sandstone`). |
 | `clear_terrain` | `all`, `region_bounds` | **Limpieza de Terreno:** Elimina todo el terreno del mundo (`workspace.Terrain:Clear()`) o un sector específico con soporte `Ctrl + Z`. |
-| `configure_water` | `color`, `reflectance`, `transparency`, `wave_size`, `wave_speed` | **Atmósfera Acuática:** Configura visuales del agua nativa de Roblox (color RGB, reflectancia, transparencia y oleaje). |
+| `generate_district` | `name`, `center`, `size`, `style`, `density`, `street_width`, `has_furniture`, `align_to_terrain` | **Generador Urbano Macro AAA:** Crea distritos completos con asfalto, bordillos de granito, pasos de cebra, parcelas densas (sin huecos vacíos), rascacielos/edificios 3D con toldos, farolas y árboles. |
+| `build_detailed_structure` | `name`, `position`, `footprint`, `floors`, `style`, `seed`, `has_roof_props` | **Edificio Arquitectónico AAA:** Edificio multinivel con zócalo plinto, escaparates comerciales, toldos 45°, ventanas 3D con alféizar e iluminación interior realista, y azotea habitable con HVAC, tanque y antenas. |
+| `setup_environment` | `preset`, `clock_time`, `enable_future_lighting`, `shadow_softness` | **Atmósfera Cinemática:** Configura iluminación Future, sombras suaves y post-procesado (Atmosphere volumétrica, Bloom, ColorCorrection, SunRays). |
+| `populate_street_furniture` | `center`, `length`, `orientation`, `sidewalk_offset`, `interval`, `trees`, `lamps` | **Dressing de Aceras:** Puebla aceras con farolas con luz y sombra real, árboles en alcorques de fundición, bancos, papeleras y bocas de incendio. |
 | `execute_raw_luau` | `code`, `actionName` | Ejecuta Luau arbitrario con soporte completo de Undo/Redo (`Ctrl + Z`). |
 
 ---
@@ -127,7 +130,32 @@ Soluciona el problema de asentar edificios en terrenos accidentados:
 
 ---
 
-## 6. Configuración y Puesta en Marcha
+## 6. Motor Urbano y Arquitectónico AAA (Procedural City Engine)
+
+Resuelve de raíz el problema de las ciudades planas, repetitivas y con edificios dispersos ("cajitas vacías flotando"):
+
+### 1. Generación de Distritos Densos y Cohesivos (`generate_district`)
+* **Manzanas compactas:** Subdivide cada manzana en parcelas adyacentes conectadas por callejones de servicio (4 a 6 studs), eliminando los huecos desiertos no urbanizados.
+* **Calzadas y Aceras Reales:** Asfalto oscuro rebajado, bordillos perimetrales elevados de granito (+0.6 studs) y pasos de cebra blancos en las esquinas.
+* **Nivelado de Terreno Automático:** Si `align_to_terrain = true`, el motor nivela y asienta una base sólida debajo del distrito para que ningún edificio flote sobre desniveles.
+* **Mobiliario Integrado:** Instancia automáticamente farolas de luz cálida con sombras reales proyectadas, árboles en alcorques de fundición y bocas de incendio.
+
+### 2. Edificios Arquitectónicos con Relieve 3D (`build_detailed_structure`)
+* **Zócalo Plinto:** Sobresale 0.4 studs de la fachada y se clava 4 studs en el suelo para evitar que el edificio flote en pendientes.
+* **Planta Baja Comercial:** Escaparates de suelo a techo con cristal reflectante, toldos de lona a 45° (`WedgePart`), portal remetido hacia el interior con doble puerta acristalada y rótulos comerciales con luz suave.
+* **Pisos Superiores:** Cornisas divisorias horizontales, pilastras estructurales en las esquinas y ventanas modulares con alféizar y marco 3D.
+* **Iluminación Interior Heterogénea:** Un porcentaje pseudoaleatorio de ventanas (~40%) emite luz cálida o fría simulando actividad humana real, logrando un skyline nocturno vivo y cinemático.
+* **Azoteas Habitables:** Parapetos tácticos de 2.4 studs (cobertura para combate), caseta de acceso a escaleras, unidades de climatización HVAC con ventiladores, tanque de agua cilíndrico sobre zancos y antena de telecomunicaciones con baliza roja brillante.
+
+### 3. Paletas de Estilo PBR (`modern_downtown`, `classic_brick`, `cyberpunk`, `industrial`, `favela`)
+Cada estilo define materiales físicos nativos de Roblox (`Concrete`, `Brick`, `Metal`, `DiamondPlate`, `WoodPlanks`, `Glass`), reflectancias y contrastes cromáticos coherentes.
+
+### 4. Iluminación y Post-Procesado Cinemático (`setup_environment`)
+Inyecta `Technology = Future`, `Atmosphere` volumétrica, `BloomEffect`, `ColorCorrectionEffect` y `SunRaysEffect` con presets cinematográficos (`cyberpunk_night`, `golden_hour`, `overcast_fog`, `sunny_noon`, `rainy_noir`).
+
+---
+
+## 7. Configuración y Puesta en Marcha
 
 ### 1. Activar el Plugin en Roblox Studio
 1. Abre tu proyecto o un *Baseplate* en **Roblox Studio**.
@@ -171,7 +199,7 @@ npm run logs:clear
 
 ---
 
-## 7. Guía de Generación con OpenCode (Cómo Usarlo)
+## 8. Guía de Generación con OpenCode (Cómo Usarlo)
 
 ### ⚠️ Reglas de Oro al interactuar con OpenCode
 
