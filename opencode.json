@@ -1,13 +1,14 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "mcp": {
-    "roblox-graybox": {
-      "type": "local",
-      "command": [
-        "node",
-        "C:/Users/dtc59/Desktop/roblox-graybox-mcp/src/index.js"
-      ],
-      "enabled": true
+    "servers": {
+      "roblox-graybox": {
+        "type": "local",
+        "command": [
+          "node",
+          "C:\\Users\\dtc59\\Desktop\\roblox-graybox-mcp\\src\\index.js"
+        ]
+      }
     }
   }
 }
