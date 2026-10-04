@@ -162,3 +162,10 @@ El archivo de configuración ya se encuentra en tu directorio global `~/.config/
 
 #### 8. Deshacer Cambios Inmediatamente
 > Si cualquier diseño generado no te convence, no tienes que pedirle a la IA que lo borre: presiona **`Ctrl + Z`** directamente en **Roblox Studio** y el último lote se deshará instantáneamente. Si presionas **`Ctrl + Y`**, se restaurará.
+
+---
+
+## 6. Documentación Adicional y Especificaciones Técnicas
+
+- 📐 **[CITY_SPEC_AND_API.md](file:///C:/Users/dtc59/Desktop/roblox-graybox-mcp/CITY_SPEC_AND_API.md)**: Especificación urbana de la metrópoli de 5 distritos ($4000 \times 3600\text{ studs}$), zonificación, elevaciones y esquemas JSON.
+- 🏛️ **[PROCEDURAL_ARCHITECTURE_SPEC.md](file:///C:/Users/dtc59/Desktop/roblox-graybox-mcp/PROCEDURAL_ARCHITECTURE_SPEC.md)**: Especificación técnica completa del motor de generación procedural: arquitectura híbrida, presets de estilo y materiales PBR, fachadas 3D paramétricas, macro-urbanismo (`generate_district`), iluminación cinemática y fallback de assets.
