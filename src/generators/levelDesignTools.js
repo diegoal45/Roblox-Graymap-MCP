@@ -18,10 +18,11 @@ local function resolveTarget(pathStr)
         local sel = game:GetService("Selection"):Get()
         return sel[1]
     end
-    if pathStr == "Workspace" or pathStr == "workspace" then
-        return workspace
-    end
-    local segments = string.split(pathStr, "/")
+    local norm = string.gsub(pathStr, "[.:\\]", "/")
+    norm = string.gsub(norm, "^[Ww]orkspace/?", "")
+    if norm == "" then return workspace end
+
+    local segments = string.split(norm, "/")
     local current = workspace
     for _, s in ipairs(segments) do
         if s ~= "" then
@@ -715,6 +716,27 @@ else
         elseif target:IsA("BasePart") then
             targetPos = target.Position
             targetSize = target.Size
+        elseif target:IsA("Folder") then
+            local parts = {}
+            for _, d in ipairs(target:GetDescendants()) do
+                if d:IsA("BasePart") then table.insert(parts, d) end
+            end
+            if #parts > 0 then
+                local minX, minY, minZ = math.huge, math.huge, math.huge
+                local maxX, maxY, maxZ = -math.huge, -math.huge, -math.huge
+                for _, p in ipairs(parts) do
+                    local pPos = p.Position
+                    local pSz = p.Size * 0.5
+                    minX = math.min(minX, pPos.X - pSz.X)
+                    minY = math.min(minY, pPos.Y - pSz.Y)
+                    minZ = math.min(minZ, pPos.Z - pSz.Z)
+                    maxX = math.max(maxX, pPos.X + pSz.X)
+                    maxY = math.max(maxY, pPos.Y + pSz.Y)
+                    maxZ = math.max(maxZ, pPos.Z + pSz.Z)
+                end
+                targetPos = Vector3.new((minX + maxX)/2, (minY + maxY)/2, (minZ + maxZ)/2)
+                targetSize = Vector3.new(maxX - minX, maxY - minY, maxZ - minZ)
+            end
         end
     end
 end

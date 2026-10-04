@@ -60,6 +60,11 @@ import {
   generateFocusCameraLuau,
   generateAdjustLightingLuau,
 } from "./generators/levelDesignTools.js";
+import { generateDocksLuau } from "./generators/docks.js";
+import { generateMotelLuau } from "./generators/motel.js";
+import { generateStorageFacilityLuau } from "./generators/storageFacility.js";
+import { generateStormCanalLuau } from "./generators/stormCanal.js";
+import { generateShadyBusinessLuau } from "./generators/shadyBusiness.js";
 import { logEvent } from "./utils/logger.js";
 
 // Iniciar servidor local HTTP que conecta con Roblox Studio
@@ -1711,6 +1716,142 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
+        name: "build_docks",
+        description:
+          "MODULAR SCHEDULE 1: Genera muelles portuarios industriales (The Docks) con plataforma sobre pilotes sumergidos, norays de amarre, defensas de goma, laberinto de contenedores marítimos apilados (20ft y 40ft con marcas/colores Maersk, Evergreen, MSC), almacén logístico portuario con muelles de carga y torres de iluminación perimetral.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            name: { type: "string", default: "Hyland_Docks" },
+            position: {
+              type: "array",
+              items: { type: "number" },
+              description: "[X, Y, Z] posición central del muelle",
+            },
+            size: {
+              type: "array",
+              items: { type: "number" },
+              default: [160, 120],
+              description: "[ancho, profundidad] de la plataforma del muelle",
+            },
+            rotation_y: { type: "number", default: 0, description: "Rotación en grados sobre eje Y" },
+            container_stacks: { type: "number", default: 12, description: "Cantidad de pilas de contenedores marítimos" },
+            include_warehouse: { type: "boolean", default: true, description: "Incluir almacén logístico con muelles de carga" },
+            include_floodlights: { type: "boolean", default: true, description: "Incluir torres de proyectores de alta potencia" },
+            parent: { type: "string", default: "City/Industrial" },
+          },
+          required: ["position"],
+        },
+      },
+      {
+        name: "build_motel",
+        description:
+          "MODULAR SCHEDULE 1: Genera un motel de carretera clásico americano de 2 plantas (Sunset Roadside Motel) con pasarelas exteriores transitables, escaleras de acero DiamondPlate, habitaciones numeradas con puertas y compresores A/C, recepción/oficina, rincón de máquina de hielo/vending, parking frontal y tótem de neón retro.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            name: { type: "string", default: "Sunset_Roadside_Motel" },
+            position: {
+              type: "array",
+              items: { type: "number" },
+              description: "[X, Y, Z] posición central de la planta baja",
+            },
+            rooms_per_floor: { type: "number", default: 6, description: "Número de habitaciones por planta (4 a 10)" },
+            rotation_y: { type: "number", default: 0, description: "Rotación en grados sobre eje Y" },
+            include_neon_sign: { type: "boolean", default: true, description: "Incluir tótem luminoso de carretera de estilo vintage" },
+            include_ice_vending: { type: "boolean", default: true, description: "Incluir máquina de hielo y máquinas de refrescos" },
+            seed: { type: "number", default: 6606, description: "Semilla procedural" },
+            parent: { type: "string", default: "City/Commercial" },
+          },
+          required: ["position"],
+        },
+      },
+      {
+        name: "build_storage_facility",
+        description:
+          "MODULAR SCHEDULE 1: Genera un complejo de trasteros y mini-almacenes (Self-Storage Units) con hileras de puertas correderas metálicas numeradas, calles interiores para furgonetas, caseta de vigilancia con barrera automática y teclado PIN, valla de seguridad perimetral y una unidad secreta clandestina con mesa de laboratorio/pesaje, bidones químicos y caja fuerte.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            name: { type: "string", default: "SafeVault_Storage" },
+            position: {
+              type: "array",
+              items: { type: "number" },
+              description: "[X, Y, Z] posición central del complejo",
+            },
+            rows: { type: "number", default: 2, description: "Filas de naves de trasteros (1 a 4)" },
+            units_per_row: { type: "number", default: 6, description: "Trasteros por fila (4 a 12)" },
+            rotation_y: { type: "number", default: 0, description: "Rotación en grados sobre eje Y" },
+            include_office: { type: "boolean", default: true, description: "Incluir caseta de oficina y barrera de entrada" },
+            include_fence: { type: "boolean", default: true, description: "Incluir valla metálica perimetral" },
+            door_color_style: {
+              type: "string",
+              enum: ["orange", "blue", "red", "mixed"],
+              default: "orange",
+              description: "Color de las persianas de los trasteros",
+            },
+            has_secret_lab_unit: { type: "boolean", default: true, description: "Generar unidad secreta con laboratorio clandestino y caja fuerte" },
+            parent: { type: "string", default: "City/Industrial" },
+          },
+          required: ["position"],
+        },
+      },
+      {
+        name: "build_storm_canal",
+        description:
+          "MODULAR SCHEDULE 1: Genera un canal de drenaje pluvial urbano (Storm Drainage Canal - Estilo Los Angeles / Schedule 1) con taludes trapezoidales de hormigón reforzado, canaleta de agua rebajada, grandes tuberías culvert de alcantarillado, escaleras de gato metálicas de mantenimiento, quitamiedos de calle y puente peatonal de tuberías industriales.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            name: { type: "string", default: "Storm_Drain_Canal" },
+            position: {
+              type: "array",
+              items: { type: "number" },
+              description: "[X, Y, Z] posición central del tramo de canal",
+            },
+            length: { type: "number", default: 160, description: "Longitud del canal en studs" },
+            width: { type: "number", default: 56, description: "Anchura superior del canal en studs" },
+            depth: { type: "number", default: 16, description: "Profundidad del canal en studs" },
+            rotation_y: { type: "number", default: 0, description: "Rotación en grados sobre eje Y (0 = corre a lo largo de Z)" },
+            include_water: { type: "boolean", default: true, description: "Incluir lámina de agua residual en la canaleta central" },
+            include_pipe_bridge: { type: "boolean", default: true, description: "Incluir pasarela peatonal y puente de tuberías cruzadas" },
+            include_culvert_pipes: { type: "boolean", default: true, description: "Incluir bocas de tubería de alcantarillado con rejilla" },
+            include_guardrails: { type: "boolean", default: true, description: "Incluir barandillas de seguridad a nivel de calzada" },
+            parent: { type: "string", default: "City/Infrastructure" },
+          },
+          required: ["position"],
+        },
+      },
+      {
+        name: "build_shady_storefront",
+        description:
+          "MODULAR SCHEDULE 1: Genera un local comercial clandestino / negocio turbio (Casa de Empeños Pawn Shop, Farmacia 24/7 RX, Bodega de barrio o Lavandería). Incluye escaparates con rejas de seguridad macizas de acero, letrero luminoso temático, mostrador interior blindado con bandeja pasamonedas, puerta trasera de servicio blindada con teclado PIN, contenedor de basura, cámara de vigilancia CCTV con LED rojo y escondite clandestino para entregas (Dead Drop Stash) interactivo.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            name: { type: "string", default: "Shady_Business_Storefront" },
+            position: {
+              type: "array",
+              items: { type: "number" },
+              description: "[X, Y, Z] posición del frente del edificio",
+            },
+            rotation_y: { type: "number", default: 0, description: "Rotación en grados sobre eje Y" },
+            business_type: {
+              type: "string",
+              enum: ["pawn", "pharmacy", "bodega", "laundromat"],
+              default: "pawn",
+              description: "Tipo de negocio (casa de empeños, farmacia, colmado o lavandería)",
+            },
+            has_back_alley: { type: "boolean", default: true, description: "Incluir salida al callejón trasero con contenedor y escalera al tejado" },
+            has_security_bars: { type: "boolean", default: true, description: "Colocar rejas metálicas pesadas en las lunas de los escaparates" },
+            include_interior: { type: "boolean", default: true, description: "Generar mostrador blindado de dependiente e iluminación" },
+            include_dead_drop: { type: "boolean", default: true, description: "Generar escondite clandestino para intercambios (Dead Drop Stash) con tags de CollectionService" },
+            parent: { type: "string", default: "City/Commercial" },
+          },
+          required: ["position"],
+        },
+      },
+      {
         name: "execute_raw_luau",
         description: "Ejecuta cualquier código Luau arbitrario con soporte Undo/Redo (Ctrl+Z).",
         inputSchema: {
@@ -2913,6 +3054,137 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           {
             type: "text",
             text: `☀️ Propiedades de iluminación actualizadas en tiempo real:\n\n\`\`\`json\n${JSON.stringify(result.data || {}, null, 2)}\n\`\`\``,
+          },
+        ],
+      };
+    }
+
+    if (name === "build_docks") {
+      const luau = generateDocksLuau({
+        name: args.name,
+        position: args.position,
+        size: args.size,
+        rotationY: args.rotation_y,
+        containerStacks: args.container_stacks,
+        includeWarehouse: args.include_warehouse,
+        includeFloodlights: args.include_floodlights,
+        parent: args.parent,
+      });
+
+      await sendToRoblox(luau, `Build Docks (${args.name || "Hyland_Docks"})`, {}, 30000);
+      stats = { docks: args.name || "Hyland_Docks", position: args.position };
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `🚢 Muelle portuario industrial '${args.name || "Hyland_Docks"}' generado exitosamente en [${args.position.join(", ")}]:\n- Plataforma con pilotes sumergidos y norays de amarre\n- Laberinto de ${args.container_stacks ?? 12} pilas de contenedores de carga marítima\n- Almacén logístico con muelles de carga y torres de focos LED\n- Deshacer disponible con Ctrl + Z en Roblox Studio.`,
+          },
+        ],
+      };
+    }
+
+    if (name === "build_motel") {
+      const luau = generateMotelLuau({
+        name: args.name,
+        position: args.position,
+        roomsPerFloor: args.rooms_per_floor,
+        rotationY: args.rotation_y,
+        includeNeonSign: args.include_neon_sign,
+        includeIceVending: args.include_ice_vending,
+        seed: args.seed,
+        parent: args.parent,
+      });
+
+      await sendToRoblox(luau, `Build Roadside Motel (${args.name || "Sunset_Roadside_Motel"})`, {}, 30000);
+      stats = { motel: args.name || "Sunset_Roadside_Motel", position: args.position };
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `🏨 Motel de carretera '${args.name || "Sunset_Roadside_Motel"}' de 2 plantas generado exitosamente en [${args.position.join(", ")}]:\n- Pasarelas exteriores transitables y escaleras de acero DiamondPlate\n- ${((args.rooms_per_floor ?? 6) * 2)} habitaciones numeradas con puertas y A/C individual\n- Recepción de gerencia, rincón de máquina de hielo y aparcamiento frontal\n- Gran tótem luminoso retro de carretera de neón.`,
+          },
+        ],
+      };
+    }
+
+    if (name === "build_storage_facility") {
+      const luau = generateStorageFacilityLuau({
+        name: args.name,
+        position: args.position,
+        rows: args.rows,
+        unitsPerRow: args.units_per_row,
+        rotationY: args.rotation_y,
+        includeOffice: args.include_office,
+        includeFence: args.include_fence,
+        doorColorStyle: args.door_color_style,
+        hasSecretLabUnit: args.has_secret_lab_unit,
+        parent: args.parent,
+      });
+
+      await sendToRoblox(luau, `Build Storage Facility (${args.name || "SafeVault_Storage"})`, {}, 30000);
+      stats = { facility: args.name || "SafeVault_Storage", position: args.position };
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `📦 Complejo de trasteros '${args.name || "SafeVault_Storage"}' generado exitosamente en [${args.position.join(", ")}]:\n- ${args.rows ?? 2} filas con ${(args.units_per_row ?? 6)} trasteros cada una con persianas metálicas (${args.door_color_style || "orange"})\n- Valla perimetral de seguridad, caseta de control y barrera automática con código PIN\n- Unidad secreta con laboratorio clandestino y caja fuerte con cerradura\n- Deshacer disponible con Ctrl + Z.`,
+          },
+        ],
+      };
+    }
+
+    if (name === "build_storm_canal") {
+      const luau = generateStormCanalLuau({
+        name: args.name,
+        position: args.position,
+        length: args.length,
+        width: args.width,
+        depth: args.depth,
+        rotationY: args.rotation_y,
+        includeWater: args.include_water,
+        includePipeBridge: args.include_pipe_bridge,
+        includeCulvertPipes: args.include_culvert_pipes,
+        includeGuardrails: args.include_guardrails,
+        parent: args.parent,
+      });
+
+      await sendToRoblox(luau, `Build Storm Canal (${args.name || "Storm_Drain_Canal"})`, {}, 30000);
+      stats = { canal: args.name || "Storm_Drain_Canal", position: args.position };
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `🌊 Canal de drenaje pluvial '${args.name || "Storm_Drain_Canal"}' generado exitosamente en [${args.position.join(", ")}]:\n- Tramo de ${args.length ?? 160} studs de longitud x ${args.width ?? 56} studs de ancho\n- Taludes de hormigón trapezoidales precisos con WedgeParts y canaleta de agua central\n- Tuberías gigantes culvert de alcantarillado con rejilla metálica\n- Pasarela industrial peatonal de tuberías elevadas y escaleras de mantenimiento.`,
+          },
+        ],
+      };
+    }
+
+    if (name === "build_shady_storefront") {
+      const luau = generateShadyBusinessLuau({
+        name: args.name,
+        position: args.position,
+        rotationY: args.rotation_y,
+        businessType: args.business_type,
+        hasBackAlley: args.has_back_alley,
+        hasSecurityBars: args.has_security_bars,
+        includeInterior: args.include_interior,
+        includeDeadDrop: args.include_dead_drop,
+        parent: args.parent,
+      });
+
+      await sendToRoblox(luau, `Build Shady Storefront (${args.business_type || "pawn"})`, {}, 30000);
+      stats = { businessType: args.business_type || "pawn", position: args.position };
+
+      return {
+        content: [
+          {
+            type: "text",
+            text: `🏪 Local comercial turbio '${args.name || "Shady_Business_Storefront"}' (${args.business_type || "pawn"}) generado en [${args.position.join(", ")}]:\n- Fachada con cristaleras reforzadas con rejas de seguridad macizas\n- Mostrador blindado de dependiente con ventana pasamonedas de acero\n- Callejón trasero con contenedor de basura, escalera de escape a la azotea y cámara CCTV\n- Escondite clandestino (Dead Drop Stash) interactivo para intercambios y mercancía.`,
           },
         ],
       };

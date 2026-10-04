@@ -149,7 +149,7 @@ local function buildFavela()
                     win.Transparency = 0.4
                     -- Toldo improvisado de chapa ondulada sobre ventana
                     local awnCF = CFrame.new(lotX, flY + 2.6, houseZ + houseDepth / 2 + overhang + 1.2) * CFrame.Angles(math.rad(15), 0, 0)
-                    makePart("Awning_Tin", Vector3.new(4.2, 0.3, 2.5), awnCF, Color3.fromRGB(140, 145, 150), Enum.Material.CorrugatedMetal, false, true)
+                    makePart("Awning_Tin", Vector3.new(4.2, 0.3, 2.5), awnCF, Color3.fromRGB(140, 145, 150), Enum.Material.DiamondPlate, false, true)
                 end
             end
 
@@ -160,7 +160,7 @@ local function buildFavela()
 
             -- Techo de chapa con piedras de sujeción (típico favela)
             makePart("Roof_Tin", Vector3.new(lotWidth - 1, 0.4, houseDepth + 1),
-                CFrame.new(lotX, roofY + 0.2, houseZ), Color3.fromRGB(150, 155, 160), Enum.Material.CorrugatedMetal, true)
+                CFrame.new(lotX, roofY + 0.2, houseZ), Color3.fromRGB(150, 155, 160), Enum.Material.DiamondPlate, true)
 
             -- Caixa d'água azul cilíndrica de 1000L
             if (lotSeed % 10) < 8 then

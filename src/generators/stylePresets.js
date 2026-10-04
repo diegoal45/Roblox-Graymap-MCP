@@ -130,7 +130,7 @@ export const STYLE_PRESETS = {
   cyberpunk: {
     name: "Cyberpunk / Neo-Metropolis",
     description: "Megaestructuras distópicas con chapa acanalada, cables aéreos, paneles de carbono y rótulos de neón vibrantes",
-    facadeMaterials: ["Concrete", "CorrugatedMetal", "DiamondPlate"],
+    facadeMaterials: ["Concrete", "DiamondPlate", "DiamondPlate"],
     facadeColors: [
       [24, 26, 32],   // Negro carbón profundo
       [36, 38, 46],   // Gris oscuro industrial
@@ -250,7 +250,7 @@ export const STYLE_PRESETS = {
   industrial: {
     name: "Industrial Warehouse & Docklands",
     description: "Fábricas y muelles portuarios con ladrillo clinker, vigas de acero I-beam, chapa oxidada, ventanales de fábrica cuadriculados y portones de carga",
-    facadeMaterials: ["Brick", "CorrugatedMetal", "Concrete"],
+    facadeMaterials: ["Brick", "DiamondPlate", "Concrete"],
     facadeColors: [
       [135, 58, 42],  // Ladrillo clinker oscuro
       [92, 96, 104],  // Hormigón nave industrial
@@ -275,8 +275,8 @@ export const STYLE_PRESETS = {
       [115, 82, 52],
       [42, 45, 50],
     ],
-    awningMaterial: "CorrugatedMetal",
-    roofFloorMaterial: "CorrugatedMetal",
+    awningMaterial: "DiamondPlate",
+    roofFloorMaterial: "DiamondPlate",
     roofFloorColor: [75, 78, 82],
     parapetMaterial: "Metal",
     parapetColor: [55, 60, 66],
@@ -334,7 +334,7 @@ export const STYLE_PRESETS = {
       [130, 135, 140], // Chapa galvanizada
       [170, 60, 45],  // Lona roja
     ],
-    awningMaterial: "CorrugatedMetal",
+    awningMaterial: "DiamondPlate",
     roofFloorMaterial: "Concrete",
     roofFloorColor: [110, 105, 100],
     parapetMaterial: "Brick",
