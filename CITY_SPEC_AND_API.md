@@ -207,6 +207,173 @@ Genera escaleras de celosía (`TrussPart`) escalables por el avatar de Roblox de
 
 ---
 
+### 9. `build_house` (Casas Unifamiliares Estilo GTA San Andreas)
+Construye viviendas unifamiliares realistas con tejado a dos aguas en cuña (`WedgePart`), chimeneas de ladrillo, porche cubierto con barandilla y farol, ventanas con contraventanas de madera (*shutters*), garaje con camino de hormigón (*driveway*), buzón americano a pie de calle y patio trasero con barbacoa.
+
+```jsonc
+{
+  "name": "Grove_Street_House_01",
+  "position": [100, 0, 100],
+  "lot_size": [56, 72],             // [ancho X, fondo Z]
+  "style": "suburban_bungalow",     // "suburban_bungalow" | "victorian_rowhouse" | "vinewood_mansion" | "duplex_apartment"
+  "has_garage": true,
+  "has_porch": true,
+  "has_fence": true,
+  "has_yard_props": true,           // Buzón, camino de losas, barbacoa y cubos
+  "parent": "City/Houses"
+}
+```
+
+---
+
+### 10. `build_landmark` (Hitos Urbanos y Servicios Comerciales)
+Construye edificios emblemáticos funcionales:
+
+```jsonc
+{
+  "type": "gas_station",            // "gas_station" | "fast_food_diner" | "police_station"
+  "name": "Gas_Station_24_7",
+  "position": [200, 0, 0],
+  "rotation_y": 0,
+  "parent": "City/Landmarks"
+}
+```
+* **`gas_station`**: Marquesina iluminada, 4 surtidores con mangueras, tienda 24/7 con escaparates y rótulos iluminados, tótem de precios gigante a pie de calle y máquina de hielo.
+* **`fast_food_diner`**: Burger Shot / Diner con carril *Drive-Thru* transitable, poste de menú con interfono, ventanilla de recogida de pedidos y gran tótem cartel elevado estilo autopista.
+* **`police_station`**: Comisaría cívica de 2 plantas con 3 cocheras de patrullas con portones enrollables, helipuerto operativo en azotea con balizas de aterrizaje y torre de radio.
+
+---
+
+### 11. `place_traffic_signage` (Señalización Vial y Semáforos)
+Despliega elementos oficiales de control de tráfico:
+
+```jsonc
+{
+  "type": "intersection_traffic_light", // "intersection_traffic_light" | "stop_sign" | "street_name_sign" | "speed_limit" | "road_arrows"
+  "position": [0, 0, 0],
+  "rotation_y": 0,
+  "street_a": "GROVE ST",
+  "street_b": "GANTON AVE",
+  "speed_limit": 35,
+  "arrow_type": "straight_and_turn",
+  "parent": "City/Signage"
+}
+```
+
+---
+
+### 12. `build_elevated_highway` (Autopista Elevada / Freeway)
+Construye tramos de autopista elevada de 4 carriles (36 studs de ancho) a +22 studs de altura sostenida por pilares macizos en T (*hammerhead piers*), barreras laterales New Jersey, pórticos verdes interestatales y rampas de acceso al suelo:
+
+```jsonc
+{
+  "name": "East_West_Freeway",
+  "start_point": [-200, 22, 0],
+  "end_point": [200, 22, 0],
+  "road_width": 36,
+  "elevation": 22,
+  "include_piers": true,
+  "include_gantry_sign": true,
+  "include_ramp": true,
+  "ramp_side": "Right",
+  "parent": "City/Highways"
+}
+```
+
+---
+
+### 13. `build_parking_lot` (Estacionamientos Comerciales y Públicos)
+Explanada de aparcamiento profesional con asfalto, bordillos, plazas delimitadas, plazas accesibles en azul, topes de rueda de hormigón (*wheel stops*), isletas con palmeras, torres de focos altos y barrera de acceso levadiza:
+
+```jsonc
+{
+  "name": "Supermarket_Parking",
+  "center": [0, 0, 0],
+  "size": [90, 80],
+  "include_landscaping": true,
+  "include_light_poles": true,
+  "include_pay_station": true,
+  "include_barrier_gate": true,
+  "parent": "City/Parking"
+}
+```
+
+---
+
+### 14. Herramientas Interactivas de Level Design en Studio
+
+#### `get_selection` (Conciencia de Selección Viva)
+Lee qué objetos tienes seleccionados con el ratón en Studio. No requiere parámetros:
+```jsonc
+// Retorna: [{ name: "House_01", className: "Model", position: [100, 0, 100], size: [56, 22, 72], partCount: 42, anchored: true, tags: ["House"] }]
+```
+
+#### `transform_object` (Manipulación 3D)
+Mueve o rota un objeto en Workspace o la selección activa (`"selected"`):
+```jsonc
+{
+  "target_path": "selected",
+  "offset": [10, 0, 0],             // Mover 10 studs en X
+  "rotation_offset": [0, 90, 0],     // Girar 90 grados
+  "snap_grid": 4
+}
+```
+
+#### `align_to_surface` (Imán al Suelo / Magnet Drop)
+Asienta con raycast vertical hacia abajo cualquier objeto flotante o enterrado:
+```jsonc
+{
+  "target_path": "selected",
+  "align_normal": true              // Alinear rotación a la inclinación de la colina
+}
+```
+
+#### `duplicate_and_repeat` (Clonación en Serie / Array)
+Duplica un objeto $N$ veces a lo largo de un vector de desplazamiento:
+```jsonc
+{
+  "target_path": "City/Props/Street_Lamp",
+  "count": 5,
+  "offset_step": [0, 0, 40],        // Una farola cada 40 studs
+  "parent": "City/Props"
+}
+```
+
+#### `measure_distance` (Métrica Espacial y Línea de Visión)
+Mide distancias, pendiente y si hay línea de visión sin obstáculos:
+```jsonc
+{
+  "point_a": [0, 0, 0],
+  "point_b": [120, 15, 80],
+  "check_line_of_sight": true
+}
+```
+
+#### `audit_performance` & `optimize_workspace` (Escudo de Rendimiento)
+Audita lag físico y optimiza en 1 clic:
+```jsonc
+// 1. Auditar:
+{ "target_path": "Workspace" }
+
+// 2. Optimizar:
+{
+  "target_path": "Workspace",
+  "anchor_static": true,
+  "enable_streaming_lod": true
+}
+```
+
+#### `focus_camera` (Teletransporte de Cámara de Studio)
+Centra y encuadra la cámara en el viewport de Studio sobre un objeto o coordenadas:
+```jsonc
+{
+  "target_path": "City/Landmarks/Gas_Station_24_7",
+  "view_mode": "perspective_overhead" // "perspective_overhead" | "front" | "top_down" | "orbit"
+}
+```
+
+---
+
 ## 3. Catálogo Estándar de Tags (CollectionService)
 
 | Tag | Uso Recomendado en Scripts de Juego |

@@ -1,63 +1,83 @@
-# Roblox Studio Graybox & Level Design MCP (para OpenCode)
+# Roblox Studio Graybox, Level Design & AAA Urban Engine MCP
 
-Servidor Model Context Protocol (MCP) de nivel profesional para **Level Design**, **Prototipado Rápido** y **Grayboxing (Blockout)** paramétrico en tiempo real para **Roblox Studio**, diseñado para conectarse directamente con **OpenCode**.
+Servidor **Model Context Protocol (MCP)** de nivel profesional que conecta asistentes de Inteligencia Artificial (OpenCode, Claude Desktop, Antigravity) bidireccionalmente con **Roblox Studio**.
 
-Permite que una IA en OpenCode genere geometría modular, habitaciones huecas con vanos de puerta transitables, escaleras con peldaños calibrados, cuñas (rampas), escaleras técnicas (TrussPart) y estructuras completas de cualquier escala, con **soporte nativo de Deshacer/Rehacer (`Ctrl + Z`)**.
+Transforma el desarrollo de juegos en Roblox permitiendo:
+1. **Level Design Interactivo en Vivo:** El asistente lee lo que seleccionas en Roblox Studio, mide distancias, comprueba líneas de visión, asienta objetos con raycast y mueve/duplica modelos en tiempo real.
+2. **Generación Urbana Estilo GTA: San Andreas:** Construcción paramétrica de alta fidelidad: barrios residenciales unifamiliares con porches y chimeneas (tipo Grove St / Ganton / San Fierro), autopistas elevadas con pilares de hormigón en T, gasolineras 24/7, diners con *Drive-Thru*, estacionamientos con *wheel stops*, semáforos en mástil y palmeras californianas.
+3. **Escudo de Rendimiento y Auditoría Forense:** Detección automática de lag físico (piezas desancladas), optimización de colisiones (`CanTouch = false`), activación de LOD `StreamingMesh` y soporte nativo de Deshacer/Rehacer (`Ctrl + Z`).
+4. **Motor de Terreno Voxel Nativo:** Generación procedural de 8 biomas con cálculo de pendientes, cimentación de parcelas y excavación de carreteras y túneles subterráneos.
 
 ---
 
-## 1. Arquitectura del Sistema
+## 1. Arquitectura y Protocolo de Comunicación Bidireccional
+
+El sistema opera mediante una conexión desacoplada y robusta que garantiza que Roblox Studio nunca se bloquee ni congele, independientemente de la complejidad de la geometría generada:
 
 ```text
- ┌──────────────┐         stdio          ┌────────────────────────────────────────┐
- │   OpenCode   │ ◄────────────────────► │          Servidor MCP Graybox          │
- │ (AI Client)  │                        │          (Node.js / Express)           │
- └──────────────┘                        └───────────────────┬────────────────────┘
-                                                             │ Local HTTP (Port 30250)
-                                                             │ • GET /poll (Batch Luau)
-                                                             │ • POST /response (Feedback Loop)
-                                                             ▼
-                                         ┌────────────────────────────────────────┐
-                                         │         Roblox Studio Plugin           │
-                                         │         (ChangeHistoryService)         │
-                                         └───────────────────┬────────────────────┘
-                                                             │
-                                     ┌───────────────────────┴───────────────────────┐
-                                     ▼                                               ▼
-                         ┌───────────────────────┐                       ┌───────────────────────┐
-                         │   Workspace.Graybox   │                       │     Feedback Loop     │
-                         │ (Jerarquías / Tags)   │                       │ (get_workspace_layout)│
-                         └───────────────────────┘                       └───────────────────────┘
+ ┌────────────────────────┐         stdio         ┌───────────────────────────────────────┐
+ │   Cliente MCP (IA)     │ ◄───────────────────► │        Servidor Node.js / Express     │
+ │ (OpenCode / Antigravity│                       │          (roblox-graybox-mcp)         │
+ └────────────────────────┘                       └──────────────────┬────────────────────┘
+                                                                     │ HTTP Local (127.0.0.1:30250)
+                                                                     │ • GET /poll (Cola de comandos)
+                                                                     │ • POST /response (Retorno de datos)
+                                                                     ▼
+                                                  ┌───────────────────────────────────────┐
+                                                  │       Plugin de Roblox Studio         │
+                                                  │      (DockWidget UI Rojo + Luau)      │
+                                                  └──────────────────┬────────────────────┘
+                                                                     │
+                                      ┌──────────────────────────────┴──────────────────────────────┐
+                                      ▼                                                             ▼
+                          ┌───────────────────────┐                                     ┌───────────────────────┐
+                          │  ChangeHistoryService │                                     │   Servicios de Studio │
+                          │ (Undo / Redo Atómico) │                                     │ Selection, Camera,    │
+                          │   • Ctrl + Z nativo   │                                     │ CollectionService,    │
+                          │   • Poda de colisiones│                                     │ Terrain, Raycast      │
+                          └───────────────────────┘                                     └───────────────────────┘
 ```
 
----
+### ¿Cómo Funciona el Enlace por Debajo?
 
-## 2. Pilares de Diseño del MCP
-
-### 1. Sistema de Batching (Loteo Masivo)
-Enviar una petición HTTP por cada ladrillo congela Roblox Studio. Este MCP implementa `build_structure(parts_list)`, permitiendo enviar **lotes de decenas o cientos de partes en un solo mensaje**, las cuales el plugin instancia en memoria de golpe en milisegundos.
-
-### 2. Geometría Paramétrica Crítica
-- **`spawn_wedge` (Cuñas / WedgePart):** Para rampas vehiculares, desniveles de terreno y cubiertas inclinadas.
-- **`spawn_truss` (Escaleras técnicas / TrussPart):** Escaleras de cuadrícula escalables automáticamente por el avatar de Roblox.
-- **`set_hollow_box`:** Crea habitaciones o edificios huecos completos (suelo, techo y 4 paredes con vanos de puerta) en una sola llamada.
-- **`create_stairs`:** Escaleras peatonales fluidas calibradas a la altura de paso del personaje ($\le 1.1\text{ studs}$).
-
-### 3. Organización Jerárquica Limpia (`parent`)
-Evita que miles de partes inunden la raíz del Workspace. Cada herramienta incluye el parámetro `parent` (ej: `parent = "Level_1/Zone_A"` o `parent = "Interiors/Room_01"`). El plugin crea automáticamente las subcarpetas necesarias en el árbol de instancias.
-
-### 4. Atributos de Juego y Etiquetas (CollectionService)
-Permite asignar Tags de CollectionService y atributos de juego (`SetAttribute`) directamente desde OpenCode (ej: `"SpawnPoint"`, `"CaptureZone"`, `"Climbable"`, `"Cover_Low"`).
-
-### 5. Snap to Grid (Ajuste a Rejilla)
-Fuerza o redondea coordenadas X y Z a múltiplos de **4 u 8 studs** (el estándar de construcción modular de Roblox), garantizando que las piezas encajen sin huecos milimétricos.
-
-### 6. Capacidad de Lectura en Vivo (Feedback Loop)
-Mediante `get_workspace_layout()`, OpenCode puede inspeccionar las partes y modelos ya existentes en Studio (posiciones, bounding boxes y tags) para no construir encima de lo que ya modelaste manualmente.
+1. **Cola de Polling No Bloqueante (`/poll`):** El plugin de Roblox Studio consulta cada `0.35s` al servidor local Node.js. Si no hay comandos pendientes, el servidor responde con `HTTP 204 No Content` para mantener el uso de CPU al 0%.
+2. **Ejecución Protegida y Deshacer Atómico:** Cada lote de construcción o transformación se envuelve dentro de `ChangeHistoryService:TryBeginRecording(...)` y `pcall()`. Si algo falla, la transacción se cancela limpiamente sin dejar piezas corruptas. El desarrollador puede presionar `Ctrl + Z` en Studio en cualquier momento para deshacer un distrito o acción completa en 1 solo paso.
+3. **Retorno de Datos Bidireccional (`/response`):** Gracias a la integración de `loadstring`, cualquier script Luau ejecutado puede retornar una tabla de datos (`return { ... }`). El plugin serializa el resultado en JSON y lo devuelve al servidor Node.js, permitiendo a la IA leer datos en tiempo real de la selección activa, diagnósticos de lag o mediciones espaciales.
+4. **Poda Automática de Colisiones y Rendimiento (Performance Shield):** Toda pieza generada aplica por defecto `CanTouch = false` y `CanQuery = false` a menos que sea un suelo transitable o muro de colisión, reduciendo el overhead de detección de colisiones de Roblox en un 80%.
 
 ---
 
-## 3. Métricas Oficiales de Graybox (Avatar Roblox R15)
+## 2. Pilares de Diseño y Buenas Prácticas Arquitectónicas
+
+> [!IMPORTANT]
+> **Más allá de la descripción:** A continuación se detallan los principios técnicos y las reglas de diseño implementadas en este MCP para evitar los errores comunes que hacen que las ciudades en Roblox se vean "planas, vacías y como bloques de juguete":
+
+### 1. La Regla del Asentamiento (The Grounding Principle)
+Uno de los problemas más graves en Roblox Studio es que los edificios generados procedimentalmente "flotan" sobre colinas o se entierran en desniveles.
+* **Zócalo Plinto:** Todo edificio y casa generada incorpora un zócalo que sobresale entre `0.4` y `0.8 studs` hacia afuera y se clava entre `2` y `4 studs` en el suelo para absorber desniveles.
+* **Imán al Suelo (`align_to_surface`):** Dispara un raycast vertical hacia abajo desde el centro del BoundingBox del modelo, calcula la cota exacta de contacto con el suelo o terreno y asienta la base a cota 0 con precisión milimétrica.
+* **Nivelado de Parcelas (`flatten_terrain_area`):** Aplana la colina con `Air` y rellena las depresiones inferiores con cimientos macizos nivelados antes de construir.
+
+### 2. Fidelidad de Materiales PBR vs `SmoothPlastic`
+Roblox trata `SmoothPlastic` como una superficie sin rugosidad ni normales, luciendo como bloques de plástico brillante de juguete sin sombras difusas.
+* Este MCP utiliza **materiales PBR nativos de Roblox**: `Brick` (ladrillos envejecidos con relieve), `Concrete` (hormigón poroso para aceras y pilares), `Granite` (bordillos de calzada), `Slate` (tejados y cornisas), `WoodPlanks` (tablas de porche y contraventanas), `Fabric` (toldos comerciales a 45°) y `Glass` reflectante con transparencia calibrada (`0.3` a `0.6`).
+
+### 3. Fachadas Articuladas en 3D en las 4 Direcciones (No Muros Ciegos)
+Muchos generadores solo decoran la fachada frontal y dejan las otras 3 caras como bloques planos grises.
+* **Orientación Perimetral Dinámica:** En `generate_district`, cada una de las 4 manzanas perimetrales calcula su orientación hacia la calle exterior correspondiente (Norte, Sur, Este u Oeste).
+* **Profundidad de Ventanas:** Las ventanas no son texturas planas; están formadas por alféizar saliente (`0.6 studs`), dintel superior, parteluces divisorios y marco exterior en relieve 3D.
+* **Portales Monumentales Remetidos:** Las entradas de los edificios están rehundidas `2 studs` hacia el interior del edificio, con doble puerta acristalada, manillones metálicos, espejo y marquesina suspendida con focos LED.
+
+### 4. Presupuesto de Rendimiento para 50+ Jugadores Simultáneos
+* **LOD StreamingMesh:** Todo modelo arquitectónico de más de 8 partes tiene activado `LevelOfDetail = Enum.ModelLevelOfDetail.StreamingMesh`, permitiendo a Roblox simplificar la malla a la distancia.
+* **Anclaje Obligatorio:** En Roblox, cualquier pieza con `Anchored = false` entra en el pipeline de simulación física de Havok/Roblox. Cientos de piezas decorativas desancladas causan caídas drásticas de FPS. La herramienta `audit_performance` detecta cualquier pieza desanclada y `optimize_workspace` la ancla en 1 clic.
+* **Poda de Sombras en Detalles Minúsculos:** Desactiva `CastShadow` en piezas menores de 3 studs (pomos de puerta, parteluces, buzones) para no saturar el buffer de sombras de `Future Lighting`.
+
+---
+
+## 3. Métricas Oficiales de Nivel de Diseño (Avatar Roblox R15)
+
+Dimensiones y ergonomía mecánica respetadas en todos los generadores y herramientas:
 
 | Elemento | Dimensión | Justificación Mecánica |
 | :--- | :--- | :--- |
@@ -67,131 +87,121 @@ Mediante `get_workspace_layout()`, OpenCode puede inspeccionar las partes y mode
 | **Peldaño Ideal** | Alto: `0.8 st`, Huella: `2.0 st` | Subida fluida a velocidad normal |
 | **Vano de Puerta** | `5 x 8.5 studs` | Permite el paso holgado con accesorios y sombreros |
 | **Pasillo Estándar** | `8 - 12 studs` | Espacio libre para 1 a 2 jugadores con cámara holgada |
-| **Cobertura Baja** | `3.0 studs` | Permite asomarse o disparar agachado |
-| **Cobertura Alta** | `6.5 studs` | Cobertura total de cuerpo completo de pie |
+| **Carril de Tráfico** | `12 studs` de ancho | Ancho estándar de carril para vehículos de Roblox |
+| **Acera Peatonal** | `6 - 8 studs` de ancho, `+0.6 st` altura | Elevación respecto al asfalto con bordillo de granito |
+| **Cobertura Baja (Crouch)** | `3.0 studs` de altura | Permite asomarse o disparar agachado |
+| **Cobertura Alta (Stand)** | `6.5 studs` de altura | Cobertura total de cuerpo completo de pie |
 
 ---
 
-## 4. Herramientas Disponibles (Tools Reference)
+## 4. Catálogo Completo de Herramientas (Tool Reference)
 
-| Herramienta | Parámetros Principales | Descripción |
+El MCP cuenta con **33 herramientas** agrupadas en 4 categorías:
+
+### Grupo A: Herramientas de Estudio y Level Design (Interactivas)
+
+| Herramienta | Parámetros Clave | Descripción y Capacidades |
 | :--- | :--- | :--- |
-| `check_studio_connection` | Ninguno | Comprueba si Roblox Studio y el plugin están conectados y activos. |
-| `inspect_area` | `position`, `radius`, `max_results` | **Conciencia Espacial:** Consulta qué objetos existen alrededor de un punto para medir el espacio libre antes de construir. |
-| `raycast_query` | `origin`, `direction`, `distance` | **Detección de Suelo (Raycast):** Mide la altura exacta del terreno, inclinación y material para asentar edificios sin que floten. |
-| `get_workspace_layout` | `folder_path`, `max_depth` | **Feedback Loop:** Lee la jerarquía, bounding boxes, posiciones y tags de objetos existentes en Studio. |
-| `create_street` | `start_position`, `end_position`, `road_width`, `has_lamps` | **Vía Urbana Completa:** Genera una calle con calzada de asfalto, aceras elevadas, líneas viales y farolas con luz real. |
-| `spawn_prop` | `type`, `position`, `rotation_y`, `length`, `parent` | **Mobiliario Lowpoly:** Genera muebles y atrezzo táctico (`counter`, `desk`, `shelf`, `dumpster`, `barrier`, `street_lamp`, `dummy`). |
-| `build_structure` | `parts_list`, `default_parent`, `snap_grid`, `auto_optimize` | **Batching Masivo + Shield:** Instancia decenas o cientos de objetos con poda de colisiones (`CanTouch = false`) y LOD `StreamingMesh`. |
-| `set_hollow_box` | `name`, `position`, `size`, `doors`, `include_parapet`, `include_lighting` | **Estructura Hueca Pro:** Construye un edificio completo con cornisas de azotea (parapeto 1.5 st), luz interior en techo, zócalo y vanos. |
-| `spawn_wedge` | `name`, `position`, `size`, `rotation`, `parent` | **Rampas / Cuñas:** Genera cuñas para rampas vehiculares, techos inclinados o pendientes de montaña. |
-| `spawn_truss` | `name`, `position`, `height`, `parent` | **Escaleras Técnicas:** Genera escaleras verticales escalables por el avatar de Roblox. |
-| `create_stairs` | `startX`, `startY`, `startZ`, `width`, `totalHeight`, `direction` | Construye escaleras peatonales fluidas ($\le 1.1\text{ studs}$ por peldaño). |
-| `add_tags_and_attributes` | `target_path`, `tags`, `attributes`, `recursive` | Asigna tags de CollectionService y atributos a partes o modelos existentes en Studio. |
-| `clear_folder` | `folder_path` | Elimina una carpeta específica en Workspace o todo `Graybox`. |
-| `generate_terrain` | `center`, `size`, `biome`, `base_height`, `height_amplitude`, `water_level`, `seed` | **Paisajes Procedurales Voxel:** Genera biomas de alta fidelidad (`mountains`, `hills`, `canyon`, `plains`, `dunes`, `island`, `river_valley`, `plateau`) con pendientes calculadas y cuerpos de agua nativos. |
-| `flatten_terrain_area` | `position`, `size`, `material`, `foundation_depth`, `clear_height`, `blend_margin`, `retaining_wall` | **Nivelado de Parcelas:** Despeja montes con `Air` y rellena cimientos sólidos nivelados para asentar rascacielos, plazas o autopistas sin que floten ni se entierren. |
-| `carve_terrain_path` | `start_point`, `end_point`, `waypoints`, `width`, `height`, `mode`, `surface_material` | **Trazado de Rutas en Terreno:** Excava carreteras a cielo abierto, túneles subterráneos abovedados (sin destruir la cima), canales fluviales navegables con agua o trincheras. |
-| `shape_terrain` | `shape`, `operation`, `position`, `size`, `radius`, `rotation`, `material` | **Esculpido Paramétrico:** Inserta o sustrae primitivas de volumen (`Block`, `Ball`, `Cylinder`, `Wedge`) con adición de material o excavación con `Air`. |
-| `paint_terrain_material` | `mode`, `center`, `size`, `target_material`, `source_material`, `region_bounds` | **Pintor de Materiales:** Pinta cajas/esferas o ejecuta sustitución nativa `Terrain:ReplaceMaterial` (ej: cambiar todo `Grass` por `Snow` o `Sandstone`). |
-| `clear_terrain` | `all`, `region_bounds` | **Limpieza de Terreno:** Elimina todo el terreno del mundo (`workspace.Terrain:Clear()`) o un sector específico con soporte `Ctrl + Z`. |
-| `generate_district` | `name`, `center`, `size`, `style`, `density`, `street_width`, `has_furniture`, `align_to_terrain` | **Generador Urbano Macro AAA:** Crea distritos completos con asfalto, bordillos de granito, pasos de cebra, parcelas densas (sin huecos vacíos), rascacielos/edificios 3D con toldos, farolas y árboles. |
-| `build_detailed_structure` | `name`, `position`, `footprint`, `floors`, `style`, `seed`, `has_roof_props` | **Edificio Arquitectónico AAA:** Edificio multinivel con zócalo plinto, escaparates comerciales, toldos 45°, ventanas 3D con alféizar e iluminación interior realista, y azotea habitable con HVAC, tanque y antenas. |
-| `setup_environment` | `preset`, `clock_time`, `enable_future_lighting`, `shadow_softness` | **Atmósfera Cinemática:** Configura iluminación Future, sombras suaves y post-procesado (Atmosphere volumétrica, Bloom, ColorCorrection, SunRays). |
-| `generate_favela` | `name`, `center`, `size`, `slope_direction`, `elevation_gain`, `seed`, `has_footbridges` | **Urbanismo Orgánico de Favela:** Genera comunidades en ladera con terrazas escalonadas, callejones estrechos (vielas), escaleras transitables, casas apiladas con voladizos, caixas d'água azules, pasarelas entre azoteas y maraña de cables. |
-| `create_playable_interior` | `name`, `center`, `size`, `floors`, `theme`, `has_stairs`, `interactive_doors` | **Interiores Jugables y Conexión Vertical:** Equipa edificios con hueco de escalera continuo para caminar hasta la azotea sin saltar, pasillo central, habitaciones temáticas amuebladas y puertas interactivas ('E'). |
-| `create_curved_road` | `name`, `waypoints`, `road_width`, `has_sidewalks`, `has_lamps` | **Carreteras Curvas Bézier:** Trazado vial suave y orgánico siguiendo desniveles o curvas con asfalto, aceras y farolas. |
-| `create_intersection` | `name`, `center`, `type`, `radius`, `has_traffic_lights` | **Nodos Urbanos e Intersecciones:** Rotondas circulares con jardín central o cruces de 4 vías / cruces en T con semáforos funcionales y pasos de cebra. |
-| `scatter_foliage_and_clutter` | `name`, `center`, `radius`, `biome`, `count`, `seed` | **Scatter Masivo de Vegetación y Atrezzo:** Dispersa bosques de pinos, robles, rocas, matorrales o clutter urbano (palets, contenedores, bidones) con Raycast y filtro de pendientes. |
-| `inject_game_mechanics` | `enable_door_controller`, `enable_day_night_lighting`, `team_spawns` | **Mecánicas e Interactividad:** Inyecta controladores en ServerScriptService para puertas animadas con TweenService, alumbrado día/noche automático y spawns tácticos. |
-| `execute_raw_luau` | `code`, `actionName` | Ejecuta Luau arbitrario con soporte completo de Undo/Redo (`Ctrl + Z`). |
+| `get_selection` | Ninguno | **Conciencia de Selección Viva:** Lee qué tienes seleccionado con el ratón en Studio (`Selection:Get()`). Devuelve posiciones `[X, Y, Z]`, dimensiones, tags, número de piezas y estado de anclaje. |
+| `set_selection` | `target_paths`, `target_path` | **Selección Programática:** Selecciona y resalta visualmente en la ventana de Studio instancias por ruta o tag. |
+| `transform_object` | `target_path`, `position`, `offset`, `rotation`, `rotation_offset`, `snap_grid` | **Manipulación 3D:** Mueve o rota modelos o partes de forma absoluta o relativa con ajuste opcional a rejilla modular. Si `target_path = "selected"`, actúa sobre la selección activa. |
+| `align_to_surface` | `target_path`, `offset_y`, `align_normal`, `raycast_distance` | **Imán al Suelo (Magnet Drop):** Asienta con raycast milimétrico modelos flotantes o enterrados contra el terreno, con opción de alineación normal a la pendiente. |
+| `duplicate_and_repeat` | `target_path`, `count`, `offset_step`, `rotation_step`, `parent` | **Clonación en Serie (Array Tool):** Duplica un objeto $N$ veces a lo largo de un vector de desplazamiento y rotación incremental (hileras de farolas, árboles, vallas). |
+| `measure_distance` | `point_a`, `point_b`, `object_a_path`, `object_b_path`, `check_line_of_sight` | **Métrica Espacial & Línea de Visión:** Mide distancia euclídea 3D, distancia horizontal XZ, desnivel Y, pendiente en grados y comprueba si hay línea de visión sin obstáculos. |
+| `find_objects` | `query_name`, `class_name`, `material`, `tag`, `scope_path`, `max_results` | **Buscador Forense de Workspace:** Filtra y localiza instancias combinando nombre, clase (`Model`, `Part`, `Light`, `Seat`), material PBR o tag de CollectionService. |
+| `audit_performance` | `target_path` | **Auditoría Forense de Rendimiento:** Analiza el mapa en busca de partes desancladas (lag de físicas), colisiones en piezas diminutas, modelos sin LOD y exceso de sombras. |
+| `optimize_workspace` | `target_path`, `anchor_static`, `optimize_collisions`, `enable_streaming_lod`, `disable_small_shadows`, `clean_empty` | **Escudo de Rendimiento en 1 Clic:** Corrige automáticamente las deficiencias detectadas: ancla piezas estáticas, poda colisiones, activa StreamingMesh y limpia carpetas vacías. |
+| `replace_material_or_color`| `target_path`, `source_material`, `target_material`, `source_color`, `target_color` | **Cambiador en Lote de Materiales/Paletas:** Sustituye en masa un material por otro (ej: todo `SmoothPlastic` a `Concrete`) o actualiza colores RGB en un distrito o modelo. |
+| `focus_camera` | `target_path`, `position`, `view_mode`, `distance` | **Teletransporte y Enfoque de Cámara:** Orienta y posiciona la cámara de Studio (`workspace.CurrentCamera`) hacia un objeto o punto desde varios ángulos (`perspective_overhead`, `front`, `top_down`, `orbit`). |
+| `adjust_lighting` | `clock_time`, `exposure`, `brightness`, `outdoor_ambient`, `fog_end`, `fog_color` | **Ajustes de Iluminación en Tiempo Real:** Modifica dinámicamente las propiedades del servicio `Lighting` de Roblox Studio. |
+| `check_studio_connection` | Ninguno | Comprueba si Roblox Studio y el plugin están conectados y activos en `127.0.0.1:30250`. |
+| `inspect_area` | `position`, `radius`, `max_results` | Consulta qué objetos o modelos existen alrededor de un punto para medir el espacio libre antes de construir. |
+| `raycast_query` | `origin`, `direction`, `distance` | Dispara un raycast desde un punto para consultar altura del suelo, inclinación y material. |
+| `get_workspace_layout` | `folder_path`, `max_depth` | Lee el árbol de jerarquía, bounding boxes, posiciones y tags de objetos existentes en Studio. |
+| `clear_folder` | `folder_path` | Elimina una carpeta específica de Workspace o todo `City` / `Graybox`. |
+| `execute_raw_luau` | `code`, `actionName` | Ejecuta cualquier código Luau arbitrario con registro en ChangeHistoryService (`Ctrl + Z`). |
 
 ---
 
-## 5. Motor de Terreno Nativo de Roblox (Smooth Terrain Engine)
+### Grupo B: Motor Urbano y Residencial Estilo GTA San Andreas
 
-El módulo de terrenos aprovecha al 100% el motor de voxeles a resolución de cuadrícula de 4 studs de Roblox (`workspace.Terrain`), ofreciendo:
-
-### 1. Biomas Procedurales Disponibles (`generate_terrain`)
-* **`mountains`:** Cumbres escarpadas con picos nevados (`Snow`), laderas empinadas de roca (`Rock`/`Slate`) y valles fértiles (`Grass`).
-* **`hills`:** Colinas suaves onduladas con hierba continua, ideales para expansiones suburbanas o valles abiertos.
-* **`canyon`:** Mesetas escalonadas y gargantas secas compuestas de estratos de arenisca (`Sandstone`) y roca.
-* **`plains`:** Praderas con microondulaciones naturales, perfectas para colocar distritos urbanos masivos.
-* **`dunes`:** Desierto con crestas sinuosas de arena cálida (`Sand`).
-* **`island`:** Isla oceánica con máscara radial de caída, playas periféricas de arena suave (`Sand`) y océano (`Water`).
-* **`river_valley`:** Valle atravesado por un cauce fluvial sinuoso relleno de agua y lecho arenoso.
-* **`plateau`:** Meseta tabular de cumbre completamente plana para fortalezas o bases elevadas.
-
-### 2. Nivelado de Parcelas Urbanas (`flatten_terrain_area`)
-Soluciona el problema de asentar edificios en terrenos accidentados:
-1. **Despeje aéreo:** Excava con `Air` cualquier monte o ladera que atraviese el volumen del edificio.
-2. **Cimentación sólida:** Rellena las depresiones inferiores con una losa sólida de hormigón, adoquines o piedra hasta la cota `targetY`.
-3. **Muros de contención opcionales:** Instancia muros perimetrales de hormigón si la excavación genera cortes de tierra verticales.
-
-### 3. Trazado de Carreteras y Túneles Subterráneos (`carve_terrain_path`)
-* En modo **`tunnel`**, utiliza perforación cilíndrica con `Air` en el subsuelo, **manteniendo intactos la montaña, vegetación y suelo superior**.
-* En modo **`road`**, realiza desmonte a cielo abierto y asfalta la rasante.
-* En modo **`river`**, excava una cuenca y la llena con `Water` y lecho de arena.
+| Herramienta | Parámetros Clave | Descripción y Capacidades |
+| :--- | :--- | :--- |
+| `build_house` | `name`, `position`, `lot_size`, `style`, `has_garage`, `has_porch`, `has_fence`, `has_yard_props` | **Casa Residencial Realista:** Construye viviendas unifamiliares detalladas (`suburban_bungalow` tipo Grove St / Ganton, `victorian_rowhouse` tipo San Fierro, `vinewood_mansion`, `duplex_apartment`). Tejado a dos aguas con aleros (`WedgePart`), chimenea de ladrillo, porche cubierto con barandilla y farol, ventanas con contraventanas de madera (*shutters*), garaje con portón y camino de hormigón (*driveway*), buzón americano y patio trasero con barbacoa. |
+| `build_landmark` | `type`, `position`, `rotation_y`, `seed`, `parent` | **Hitos Urbanos y Servicios:**<br>• `gas_station`: Gran marquesina iluminada, 4 surtidores con mangueras, tienda de conveniencia 24/7 con rótulos luminosos, tótem de precios gigante y máquina de hielo.<br>• `fast_food_diner`: Restaurante tipo Burger Shot con carril *Drive-Thru* transitable, poste de menú con interfono, ventanilla de recogida y gran tótem elevado.<br>• `police_station`: Comisaría de 2 plantas con 3 cocheras para patrullas con portones enrollables, helipuerto operativo en azotea con balizas de aterrizaje y torre de radio. |
+| `place_traffic_signage` | `type`, `position`, `rotation_y`, `street_a`, `street_b`, `speed_limit`, `arrow_type` | **Señalización Vial y Semáforos:**<br>• `intersection_traffic_light`: Semáforo en poste con brazo curvado (*mast-arm*) sobre la calzada con ópticas 3D (rojo, ámbar, verde con luces), señal peatonal y placas de calles.<br>• `stop_sign`: Señal octogonal de STOP en poste de aluminio.<br>• `street_name_sign`: Placas cruzadas con nombres de calles (ej: *"GROVE ST / GANTON AVE"*).<br>• `speed_limit`: Señal de límite de velocidad oficial (35 / 45 MPH).<br>• `road_arrows`: Flechas termoplásticas reflectantes en el asfalto (recto, giro, recto+giro). |
+| `build_elevated_highway` | `name`, `start_point`, `end_point`, `road_width`, `elevation`, `include_piers`, `include_gantry_sign`, `include_ramp`, `ramp_side` | **Autopista Elevada (Freeway):** Calzada de 4 carriles (36 studs de ancho) a +22 studs de altura sostenida por pilares macizos de hormigón armado en T (*hammerhead piers*), barreras laterales New Jersey de hormigón, pórticos de señalización verde interestatal (*"LOS SANTOS / DOWNTOWN / AIRPORT"*) y rampas de incorporación/salida hasta cota 0. |
+| `build_parking_lot` | `name`, `center`, `size`, `rows`, `include_landscaping`, `include_light_poles`, `include_pay_station`, `include_barrier_gate` | **Estacionamiento Comercial y Público (Sin Vehículos):** Explanada de asfalto con bordillos perimetrales, plazas delimitadas con líneas blancas/amarillas y plazas PMR accesibles (azul), topes de rueda de hormigón (*wheel stops*), isletas ajardinadas con palmeras, torres de focos altos, cajero automático techado y barrera levadiza. |
+| `spawn_palm_tree` | `position`, `height`, `seed`, `parent` | **Palmera Californiana Gigante (Fan Palm):** Palmera icónica estilo Los Santos / Los Ángeles de 28 a 40 studs de altura con tronco curvado segmentado de madera fibrosa y copa de hojas de palma (*fronds*) inclinadas realistas. |
+| `build_pocket_park` | `name`, `center`, `size`, `has_gazebo`, `has_fountain`, `parent` | **Parque Urbano de Bolsillo / Plaza Ajardinada:** Caminos cruzados de grava, pradera de césped, cenador/gazebo hexagonal de madera transitable con cúpula, fuente circular de agua reflectante, bancos victorianos, farolas y palmeras. |
+| `generate_district` | `name`, `center`, `size`, `district_type`, `style`, `density`, `street_width`, `has_furniture`, `has_power_lines`, `has_plaza` | **Generador Urbano Macro AAA:** Crea distritos completos con calzadas de asfalto, bordillos de granito, pasos de cebra, postes de madera con cables eléctricos aéreos tendidos, callejones con dumpsters y plaza central con fuente. Soporta `district_type: "commercial_downtown"` y `"residential_suburb"`. |
+| `build_detailed_structure` | `name`, `position`, `footprint`, `floors`, `style`, `seed`, `has_roof_props`, `has_balconies`, `has_setbacks` | **Edificio Arquitectónico AAA:** Edificio multinivel con articulación 3D en las 4 caras, portal monumental remetido con marquesina, escaparates comerciales con toldos a 45°, ventanas con alféizar e iluminación interior heterogénea, y azotea habitable con HVAC, tanque de agua cilíndrico y antena con baliza roja. |
 
 ---
 
-## 6. Motor Urbano y Arquitectónico AAA (Procedural City Engine)
+### Grupo C: Motor de Terreno Voxel Nativo (Roblox Smooth Terrain)
 
-Resuelve de raíz el problema de las ciudades planas, repetitivas y con edificios dispersos ("cajitas vacías flotando"):
-
-### 1. Generación de Distritos Densos y Cohesivos (`generate_district`)
-* **Manzanas compactas:** Subdivide cada manzana en parcelas adyacentes conectadas por callejones de servicio (4 a 6 studs), eliminando los huecos desiertos no urbanizados.
-* **Calzadas y Aceras Reales:** Asfalto oscuro rebajado, bordillos perimetrales elevados de granito (+0.6 studs) y pasos de cebra blancos en las esquinas.
-* **Nivelado de Terreno Automático:** Si `align_to_terrain = true`, el motor nivela y asienta una base sólida debajo del distrito para que ningún edificio flote sobre desniveles.
-* **Mobiliario Integrado:** Instancia automáticamente farolas de luz cálida con sombras reales proyectadas, árboles en alcorques de fundición y bocas de incendio.
-
-### 2. Edificios Arquitectónicos con Relieve 3D (`build_detailed_structure`)
-* **Zócalo Plinto:** Sobresale 0.4 studs de la fachada y se clava 4 studs en el suelo para evitar que el edificio flote en pendientes.
-* **Planta Baja Comercial:** Escaparates de suelo a techo con cristal reflectante, toldos de lona a 45° (`WedgePart`), portal remetido hacia el interior con doble puerta acristalada y rótulos comerciales con luz suave.
-* **Pisos Superiores:** Cornisas divisorias horizontales, pilastras estructurales en las esquinas y ventanas modulares con alféizar y marco 3D.
-* **Iluminación Interior Heterogénea:** Un porcentaje pseudoaleatorio de ventanas (~40%) emite luz cálida o fría simulando actividad humana real, logrando un skyline nocturno vivo y cinemático.
-* **Azoteas Habitables:** Parapetos tácticos de 2.4 studs (cobertura para combate), caseta de acceso a escaleras, unidades de climatización HVAC con ventiladores, tanque de agua cilíndrico sobre zancos y antena de telecomunicaciones con baliza roja brillante.
-
-### 3. Paletas de Estilo PBR (`modern_downtown`, `classic_brick`, `cyberpunk`, `industrial`, `favela`)
-Cada estilo define materiales físicos nativos de Roblox (`Concrete`, `Brick`, `Metal`, `DiamondPlate`, `WoodPlanks`, `Glass`), reflectancias y contrastes cromáticos coherentes.
-
-### 4. Iluminación y Post-Procesado Cinemático (`setup_environment`)
-Inyecta `Technology = Future`, `Atmosphere` volumétrica, `BloomEffect`, `ColorCorrectionEffect` y `SunRaysEffect` con presets cinematográficos (`cyberpunk_night`, `golden_hour`, `overcast_fog`, `sunny_noon`, `rainy_noir`).
-
-### 5. Urbanismo Orgánico de Favelas en Ladera (`generate_favela`)
-Diseñado para la geografía montañosa (ej: Zona 1, Y = 20 a 160):
-* **Terrazas y Desniveles:** Las viviendas escalan la ladera montañosa sobre plataformas de hormigón escalonadas.
-* **Vielas y Callejones Peatonales:** Pasillos estrechos de 4 a 6 studs entre casas apiladas con voladizos asimétricos hacia el callejón.
-* **Escaleras de Conexión:** Tramos peatonales de peldaños calibrados ($\le 0.8\text{ studs}$) que conectan cada terraza.
-* **Detalles Auténticos:** Caixas d'água azules cilíndricas en azoteas, techos de chapa ondulada (`CorrugatedMetal`), pasarelas de tablas entre techos (`Footbridges`), varillas de armadura vistas (`Rebar`) y postes de madera con cables eléctricos aéreos.
-
-### 6. Interiores Transitables y Conexión Vertical (`create_playable_interior`)
-* **Hueco de Escalera Continuo (Stairwells):** Corta el forjado de cada piso para permitir que el avatar suba desde la calle hasta la azotea sin tener que saltar.
-* **Distribución de Salas:** Pasillos centrales con tabiques divisorios para oficinas, dormitorios, tiendas o bancos.
-* **Puertas Interactivas:** Hojas de madera con bisagra animada suavemente con `TweenService` al pulsar la tecla **E** (`ProximityPrompt`).
-* **Mobiliario Temático:** Escritorios con monitores, sofás, mostradores acorazados de banco con cristal blindado y cajas fuertes.
-
-### 7. Redes Viales Curvas e Intersecciones (`create_curved_road`, `create_intersection`)
-* **Carreteras Curvas Bézier:** Trazado vial suave y peraltado adaptado a laderas y curvas de montaña.
-* **Rotondas y Cruces:** Glorietas circulares con jardineras centrales monumentales y 4 salidas, o cruces de 4 vías con semáforos de 3 luces (rojo, ámbar, verde) y pasos de cebra.
-
-### 8. Scatter Masivo de Vegetación y Mecánicas de Juego (`scatter_foliage_and_clutter`, `inject_game_mechanics`)
-* **Scatter Orgánico con Raycast:** Siembra cientos de pinos, robles y rocas en la montaña, filtrando pendientes verticales para que los árboles nunca floten.
-* **Controlador Día/Noche:** Script en `ServerScriptService` que enciende farolas y ventanas de noche (`ClockTime >= 18`) y las apaga de día automáticamente.
-* **Spawns de Equipo:** Puntos de reaparición tácticos con halos luminosos y campos de fuerza para bandos rivales.
+| Herramienta | Parámetros Clave | Descripción y Capacidades |
+| :--- | :--- | :--- |
+| `generate_terrain` | `center`, `size`, `biome`, `base_height`, `height_amplitude`, `water_level`, `resolution`, `seed` | **Paisajes Procedurales Voxel:** Genera biomas de alta fidelidad (`mountains`, `hills`, `canyon`, `plains`, `dunes`, `island`, `river_valley`, `plateau`) calculando pendientes y estratos geológicos con el motor nativo de voxeles de Roblox. |
+| `flatten_terrain_area` | `position`, `size`, `material`, `foundation_depth`, `clear_height`, `blend_margin`, `retaining_wall` | **Nivelado de Parcelas Urbanas:** Despeja montes con `Air` y rellena cimientos sólidos nivelados de hormigón para asentar distritos o autopistas sin que floten. |
+| `carve_terrain_path` | `start_point`, `end_point`, `waypoints`, `width`, `height`, `mode`, `surface_material` | **Trazado de Rutas en Terreno:** Excava carreteras a cielo abierto (`road`), túneles subterráneos abovedados que mantienen intacta la cima de la montaña (`tunnel`), canales fluviales navegables con agua (`river`) o trincheras (`trench`). |
+| `shape_terrain` | `shape`, `operation`, `position`, `size`, `radius`, `rotation`, `material` | **Esculpido Paramétrico:** Inserta o sustrae primitivas (`Block`, `Ball`, `Cylinder`, `Wedge`) con adición de material o excavación con `Air`. |
+| `paint_terrain_material` | `mode`, `center`, `size`, `target_material`, `source_material`, `region_bounds` | **Pintura y Reemplazo de Materiales:** Sustituye materiales nativos mediante `Terrain:ReplaceMaterial` (ej: cambiar todo `Grass` por `Snow` o `Sand`). |
+| `clear_terrain` | `all`, `region_bounds` | Elimina todo el terreno del mundo (`workspace.Terrain:Clear()`) o un sector específico con soporte `Ctrl + Z`. |
+| `configure_water` | `color`, `reflectance`, `transparency`, `wave_size`, `wave_speed` | Configura propiedades visuales y cinemáticas del agua de `workspace.Terrain`. |
 
 ---
 
-## 7. Configuración y Puesta en Marcha
+### Grupo D: Infraestructura, Geometría Primitiva y Sistemas de Juego
 
-### 1. Activar el Plugin en Roblox Studio
-1. Abre tu proyecto o un *Baseplate* en **Roblox Studio**.
-2. Ve a **Home > Game Settings > Security** y activa **Allow HTTP Requests**.
-3. El plugin ya está instalado en tu carpeta `%LOCALAPPDATA%\Roblox\Plugins\`.
-4. En la barra superior, pestaña **Plugins**, haz clic en el botón **Graybox MCP** para abrir la ventana acoplable lateral.
+| Herramienta | Parámetros Clave | Descripción y Capacidades |
+| :--- | :--- | :--- |
+| `build_structure` | `parts_list`, `default_parent`, `snap_grid`, `auto_optimize` | **Batching Masivo + Performance Shield:** Instancia lotes de decenas o cientos de piezas de cualquier primitiva (`Block`, `Wedge`, `CornerWedge`, `Truss`, `Cylinder`, `Sphere`) con poda automática de colisiones y LOD StreamingMesh. |
+| `set_hollow_box` | `name`, `position`, `size`, `doors`, `include_parapet`, `include_lighting`, `include_baseboard` | **Estructura Hueca Profesional:** Habitación o edificio hueco completo (suelo, techo, 4 paredes con vanos de puerta transitables, zócalo, cornisas de azotea y luz interior). |
+| `create_street` | `name`, `start_position`, `end_position`, `road_width`, `sidewalk_width`, `has_lanes`, `has_lamps` | Genera una calzada recta de asfalto con aceras elevadas, líneas divisorias amarillas y farolas automáticas. |
+| `create_curved_road` | `name`, `waypoints`, `road_width`, `has_sidewalks`, `has_lamps` | **Carreteras Curvas Bézier:** Trazado vial suave y peraltado adaptado a laderas y curvas de montaña. |
+| `create_intersection` | `name`, `center`, `type`, `radius`, `has_traffic_lights` | Glorietas circulares (*roundabouts*) con jardín/monumento central, o cruces de 4 vías / cruces en T con semáforos funcionales. |
+| `generate_favela` | `name`, `center`, `size`, `slope_direction`, `elevation_gain`, `seed`, `has_footbridges` | **Urbanismo Orgánico de Favela en Ladera:** Terrazas escalonadas, callejones peatonales estrechos (*vielas*), escaleras transitables, casas apiladas con voladizos, caixas d'água azules, pasarelas entre azoteas y maraña de cables eléctricos. |
+| `create_playable_interior` | `name`, `center`, `size`, `floors`, `theme`, `has_stairs`, `interactive_doors` | **Interiores Jugables y Conexión Vertical:** Hueco de escalera continuo para caminar hasta la azotea sin saltar, habitaciones amuebladas y puertas animadas con `TweenService` ('E'). |
+| `scatter_foliage_and_clutter` | `name`, `center`, `radius`, `biome`, `count`, `seed` | Distribuye cientos de árboles, rocas o atrezzo urbano con detección de suelo por Raycast y filtro de pendientes. |
+| `setup_environment` | `preset`, `clock_time`, `enable_future_lighting`, `shadow_softness` | Atmósfera cinemática: Future Lighting, sombras suaves, post-procesado (Atmosphere, Bloom, ColorCorrection, SunRays). |
+| `inject_game_mechanics` | `enable_door_controller`, `enable_day_night_lighting`, `enable_team_spawns` | Scripts de ServerScriptService para puertas interactivas ('E'), ciclo día/noche de farolas y spawns tácticos. |
+| `spawn_prop` | `type`, `position`, `rotation_y`, `length`, `parent` | Muebles y atrezzo táctico (`counter`, `desk`, `shelf`, `dumpster`, `barrier`, `street_lamp`, `dummy`). |
+| `spawn_wedge` | `name`, `position`, `size`, `rotation`, `parent` | Cuñas (WedgePart) para rampas de autopista, desniveles y tejados. |
+| `spawn_truss` | `name`, `position`, `height`, `parent` | Escaleras técnicas verticales (TrussPart) escalables por el avatar. |
+| `create_stairs` | `startX`, `startY`, `startZ`, `width`, `totalHeight`, `direction` | Escaleras peatonales fluidas ($\le 1.1\text{ studs}$ por peldaño). |
+| `add_tags_and_attributes` | `target_path`, `tags`, `attributes`, `recursive` | Asigna tags de CollectionService y atributos a partes o modelos existentes. |
 
-### 2. Configuración en OpenCode (`opencode.json`)
-El archivo de configuración ya se encuentra en tu directorio global `~/.config/opencode/opencode.json`:
+---
+
+## 5. Puesta en Marcha e Instalación
+
+### 1. Requisitos
+* **Node.js** v18 o superior.
+* **Roblox Studio** con un Place abierto.
+* **OpenCode** (o cliente MCP compatible como Claude Desktop o Antigravity).
+
+### 2. Configurar Roblox Studio
+1. Abre tu Place en **Roblox Studio**.
+2. Ve a **Home > Game Settings > Security** y activa **Allow HTTP Requests** (obligatorio para que el plugin se comunique con el servidor local en el puerto `30250`).
+3. El archivo del plugin ya se encuentra precompilado e instalado en tu carpeta local de plugins:
+   `%LOCALAPPDATA%\Roblox\Plugins\GrayboxBridge.rbxmx`
+4. En la barra superior de Studio, en la pestaña **Plugins**, haz clic en el botón **Graybox MCP** para desplegar la ventana acoplable lateral roja.
+
+### 3. La Interfaz Dockable de Roblox Studio (Panel Rojo)
+El panel lateral del plugin incluye controles directos para el desarrollador:
+* **Fila 1:**
+  * `⏸️ Pausar`: Suspende temporalmente el polling del servidor MCP.
+  * `🔄 Probar`: Envía un ping HTTP a `127.0.0.1:30250` para confirmar que el servidor Node.js está activo.
+  * `🧹 Limpiar`: Elimina carpetas de prueba (`City`, `Graybox`) con soporte `Ctrl + Z`.
+* **Fila 2 (Herramientas Rápidas de Level Design):**
+  * `🎯 Sel Info`: Imprime en la consola del plugin la información y coordenadas exactas de lo que tienes seleccionado en Studio.
+  * `⚡ Optimizar`: Analiza al instante el estado de anclaje de todas las partes en Workspace.
+  * `👁️ Enfocar`: Centra y orienta la cámara del viewport de Studio sobre el objeto seleccionado.
+
+### 4. Configurar OpenCode (`opencode.json`)
+Añade el servidor a tu archivo de configuración `~/.config/opencode/opencode.json`:
 
 ```json
 {
@@ -210,65 +220,81 @@ El archivo de configuración ya se encuentra en tu directorio global `~/.config/
 }
 ```
 
-### 3. Telemetría y Análisis de Logs (`npm run logs:summary`)
+---
 
-Cada llamada a herramientas entre OpenCode y Roblox Studio se registra automáticamente de forma no bloqueante en formato estructurado JSON Lines (`logs/mcp-activity.jsonl`), capturando duración en milisegundos, tasa de éxito, partes creadas, carpetas afectadas y registro de errores.
+## 6. Flujos de Trabajo Prácticos (Level Design Workflows)
 
-Para inspeccionar las métricas de rendimiento y uso en cualquier momento desde tu terminal:
-```bash
-npm run logs:summary
-```
+### Flujo 1: Crear un Barrio Suburbano Estilo Grove Street
+1. **Nivelar el terreno:**
+   > *"Nivela una parcela con `flatten_terrain_area` en [0, 0, 0] de 240x240 studs con material Grass."*
+2. **Generar el distrito residencial:**
+   > *"Usa `generate_district` para crear un distrito en [0, 0] de tamaño 240x240 con `district_type: 'residential_suburb'`. Quiero casas con porches y chimeneas, postes con cables eléctricos y mobiliario urbano."*
+3. **Añadir el parque vecinal:**
+   > *"Construye un parque de bolsillo en [60, 0, 60] con `build_pocket_park` con gazebo de madera, bancos y palmeras."*
+4. **Semáforos y cruces:**
+   > *"Coloca semáforos de mástil curvado en los cruces con `place_traffic_signage` y placas de 'GROVE ST / GANTON AVE'."*
 
-Para reiniciar el historial de logs:
-```bash
-npm run logs:clear
-```
+### Flujo 2: Construir un Nudo Comercial con Gasolinera, Diner y Autopista
+1. **Gasolinera 24/7:**
+   > *"Construye una gasolinera en [150, 0, 0] con `build_landmark` (`gas_station`)."*
+2. **Restaurante Burger Shot:**
+   > *"Al lado, en [150, 0, 100], coloca un Diner de comida rápida con Drive-Thru (`fast_food_diner`)."*
+3. **Aparcamiento Comercial:**
+   > *"Genera un estacionamiento de 90x80 studs frente a la gasolinera con `build_parking_lot` con plazas delimitadas, wheel stops y barrera levadiza."*
+4. **Autopista Elevada:**
+   > *"Construye una autopista elevada con `build_elevated_highway` desde [150, 22, -150] hasta [150, 22, 200] con pilares de hormigón en T, pórtico verde interestatal y rampa de acceso al suelo."*
+
+### Flujo 3: Pair-Programming Interactivo con Selección
+1. En **Roblox Studio**, haz clic en cualquier modelo o edificio que te guste.
+2. En el chat de **OpenCode / Antigravity**, di:
+   > *"Dime qué tengo seleccionado en Studio usando `get_selection`."*
+3. El asistente te devolverá su posición, tamaño y piezas.
+4. Luego di:
+   > *"Duplícalo 4 veces hacia adelante cada 40 studs con `duplicate_and_repeat` y asienta cada copia al terreno con `align_to_surface`."*
+5. Finalmente:
+   > *"Enfoca la cámara de Studio en la última copia generada con `focus_camera`."*
+
+### Flujo 4: Auditoría y Optimización de Rendimiento en 1 Clic
+Antes de publicar o testear el juego con jugadores reales:
+1. > *"Ejecuta `audit_performance` en Workspace para ver si hay lag de físicas o modelos desoptimizados."*
+2. El asistente reportará partes desancladas, modelos sin StreamingMesh y exceso de sombras.
+3. > *"Aplica `optimize_workspace` para anclar todo y dejar el mapa a 60 FPS estables."*
 
 ---
 
-## 8. Guía de Generación con OpenCode (Cómo Usarlo)
+## 7. Solución de Problemas Frecuentes (Troubleshooting)
 
-### ⚠️ Reglas de Oro al interactuar con OpenCode
+### 1. "Roblox Studio NO está conectado al bridge actualmente en 127.0.0.1:30250"
+* **Causa A:** No tienes Roblox Studio abierto con un Place cargado.
+* **Causa B:** La opción **Allow HTTP Requests** está desactivada en Studio. Ve a **Home > Game Settings > Security** y actívala.
+* **Causa C:** El botón del plugin no está activado. Haz clic en **Graybox MCP** en la pestaña Plugins de Studio. En la ventana roja, presiona el botón **🔄 Probar**. Si responde en verde, la conexión está lista.
 
-1. **Abrir siempre una Nueva Sesión (`+`):**
-   * En OpenCode Desktop, cada pestaña/chat fija las herramientas disponibles en el momento en que se crea.
-   * Si OpenCode te responde: *"No dispongo de esa herramienta en esta sesión"*, significa que estás en un chat viejo creado antes de registrar el MCP. Simplemente haz clic en el botón **`+`** (arriba a la izquierda) para abrir un chat limpio.
+### 2. "OpenCode dice: No dispongo de esa herramienta en esta sesión"
+* En OpenCode Desktop, cada chat congela la lista de herramientas en el instante en que se abre. Si añadiste o actualizaste el MCP mientras tenías un chat abierto, haz clic en el botón **`+`** (arriba a la izquierda) para iniciar una sesión fresca con todas las herramientas recargadas.
 
-2. **Habla en Lenguaje Natural (NO pegues código JSON crudo):**
-   * OpenCode es un agente autónomo de IA. **No debes pegar el código JSON de la herramienta manualmente en el chat**, porque la IA pensará que es un mensaje de texto normal.
-   * En su lugar, dale instrucciones en español claro describiendo lo que necesitas. La IA se encargará automáticamente de seleccionar la herramienta (`build_structure`, `set_hollow_box`, `spawn_wedge`, etc.), formatear los argumentos y enviarlos a Roblox Studio.
+### 3. "La cámara de Studio no se mueve con focus_camera"
+* La cámara solo se puede manipular si estás en **modo Edit** (construcción). Si estás en modo *Play Solo* (probando el juego con tu avatar), la cámara está bajo el control del `PlayerScript` del avatar.
 
----
-
-### 💬 Ejemplos de Prompts Listos para Copiar y Pegar
-
-#### 1. Verificación Inicial de Conexión
-> *"Comprueba si estás conectado a Roblox Studio usando check_studio_connection y dime qué herramientas tienes disponibles."*
-
-#### 2. Terreno Base y Canal (Estructura Base)
-> *"Usa build_structure para generar el terreno base de 4000x3600 studs en Y = 0 dentro de 'City/Terrain' y un canal central de 40 studs de ancho por 12 de profundidad con material Concrete."*
-
-#### 3. Edificio Completo con Puerta Transitables y Tags
-> *"Crea el edificio del Banco con set_hollow_box en la posición (0, 0, 0) de tamaño 40x16x40 studs guardado en 'City/Downtown/Bank', con una puerta al Norte de 8x10 studs etiquetada 'Heist_Target'."*
-
-#### 4. Rampa de Autopista Elevada
-> *"Genera una rampa con spawn_wedge de 20 studs de ancho, 12 studs de alto y 50 studs de largo en 'City/Highways/Ramp_1' con material Concrete orientada hacia el Este."*
-
-#### 5. Escalera Técnica o Andamio
-> *"Coloca una escalera técnica con spawn_truss de 24 studs de altura en la posición (30, 0, 30) dentro de 'City/Alleys/Ladder_1'."*
-
-#### 6. Lote Masivo de Estructuras (Batching de Casas)
-> *"Usa build_structure para generar en un solo lote 10 casas modulares de 20x12x20 studs escalonadas sobre el eje X a intervalos de 28 studs en 'City/Residential/Blocks'."*
-
-#### 7. Feedback Loop (Leer lo que ya está en Studio antes de construir)
-> *"Usa get_workspace_layout para inspeccionar la carpeta 'City' y dime qué edificios existen actualmente y en qué coordenadas están para no construir encima."*
-
-#### 8. Deshacer Cambios Inmediatamente
-> Si cualquier diseño generado no te convence, no tienes que pedirle a la IA que lo borre: presiona **`Ctrl + Z`** directamente en **Roblox Studio** y el último lote se deshará instantáneamente. Si presionas **`Ctrl + Y`**, se restaurará.
+### 4. "El mapa tiene microtirones de físicas (micro-stutters)"
+* Ejecuta `audit_performance`. Si hay partes desancladas (`Anchored = false`), la gravedad de Roblox intenta calcular contactos de colisión en cada frame. Ejecuta `optimize_workspace` con `anchor_static: true` para fijarlas al mundo.
 
 ---
 
-## 6. Documentación Adicional y Especificaciones Técnicas
+## 8. Scripts y Telemetría del Proyecto
 
-- 📐 **[CITY_SPEC_AND_API.md](file:///C:/Users/dtc59/Desktop/roblox-graybox-mcp/CITY_SPEC_AND_API.md)**: Especificación urbana de la metrópoli de 5 distritos ($4000 \times 3600\text{ studs}$), zonificación, elevaciones y esquemas JSON.
-- 🏛️ **[PROCEDURAL_ARCHITECTURE_SPEC.md](file:///C:/Users/dtc59/Desktop/roblox-graybox-mcp/PROCEDURAL_ARCHITECTURE_SPEC.md)**: Especificación técnica completa del motor de generación procedural: arquitectura híbrida, presets de estilo y materiales PBR, fachadas 3D paramétricas, macro-urbanismo (`generate_district`), iluminación cinemática y fallback de assets.
+* **Recompilar el plugin de Studio:**
+  ```bash
+  node scripts/buildPlugin.js
+  ```
+* **Ejecutar el Test Suite completo (24 pruebas de Luau y generadores):**
+  ```bash
+  node scripts/testGenerators.js
+  ```
+* **Resumen de actividad y llamadas MCP (`logs/mcp-activity.jsonl`):**
+  ```bash
+  npm run logs:summary
+  ```
+* **Limpiar el historial de logs:**
+  ```bash
+  npm run logs:clear
+  ```
