@@ -4,7 +4,9 @@
   "description": "",
   "main": "src/index.js",
   "scripts": {
-    "start": "node src/index.js"
+    "start": "node src/index.js",
+    "logs:summary": "node src/utils/analyzeLogs.js",
+    "logs:clear": "node -e \"import('fs').then(f => f.existsSync('logs/mcp-activity.jsonl') && f.unlinkSync('logs/mcp-activity.jsonl'))\""
   },
   "keywords": ["roblox", "mcp", "graybox", "opencode"],
   "author": "",

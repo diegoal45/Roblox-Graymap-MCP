@@ -121,6 +121,20 @@ El archivo de configuración ya se encuentra en tu directorio global `~/.config/
 }
 ```
 
+### 3. Telemetría y Análisis de Logs (`npm run logs:summary`)
+
+Cada llamada a herramientas entre OpenCode y Roblox Studio se registra automáticamente de forma no bloqueante en formato estructurado JSON Lines (`logs/mcp-activity.jsonl`), capturando duración en milisegundos, tasa de éxito, partes creadas, carpetas afectadas y registro de errores.
+
+Para inspeccionar las métricas de rendimiento y uso en cualquier momento desde tu terminal:
+```bash
+npm run logs:summary
+```
+
+Para reiniciar el historial de logs:
+```bash
+npm run logs:clear
+```
+
 ---
 
 ## 6. Guía de Generación con OpenCode (Cómo Usarlo)

@@ -21,6 +21,7 @@ import { generateCoverLuau } from "./generators/cover.js";
 import { generateArenaLuau } from "./generators/arena.js";
 import { generatePropLuau } from "./generators/props.js";
 import { generateStreetLuau } from "./generators/street.js";
+import { logEvent } from "./utils/logger.js";
 
 // Iniciar servidor local HTTP que conecta con Roblox Studio
 startBridge();
@@ -344,6 +345,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args = {} } = request.params;
+  const startTime = Date.now();
+  let success = true;
+  let stats = {};
+  let errorObj = null;
 
   try {
     if (name === "check_studio_connection") {
@@ -506,6 +511,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       });
 
       await sendToRoblox(luau, actionName, {}, 35000);
+      stats = { partsCreated: partsList.length, parent: defaultParent, autoOptimize };
 
       return {
         content: [
@@ -536,6 +542,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       });
 
       await sendToRoblox(luau, `Set Hollow Box ${args.name || "Building"}`);
+      stats = { partsCreated: 6, parent: args.parent || "City/Downtown" };
 
       return {
         content: [
@@ -696,10 +703,23 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
     throw new Error(`Herramienta no reconocida: ${name}`);
   } catch (err) {
+    success = false;
+    errorObj = err;
     return {
       isError: true,
       content: [{ type: "text", text: `❌ Error: ${err.message}` }],
     };
+  } finally {
+    const durationMs = Date.now() - startTime;
+    logEvent({
+      event: "TOOL_CALL",
+      tool: name,
+      durationMs,
+      success,
+      stats,
+      params: args,
+      error: errorObj,
+    }).catch(() => {});
   }
 });
 
