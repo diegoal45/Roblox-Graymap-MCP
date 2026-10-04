@@ -351,28 +351,28 @@ local function buildCompleteDistrict()
                 local roofD = hD + 2.4
 
                 local rWedgeL = makeWedge("Roof_L", Vector3.new(roofD, roofH, halfRoofW),
-                    CFrame.new(houseX - halfRoofW / 2, roofBaseY + roofH / 2, houseZ) * CFrame.Angles(0, math.rad(-90), 0), hRoofCol, Enum.Material.WoodPlanks)
+                    CFrame.new(houseX - halfRoofW / 2, roofBaseY + roofH / 2, houseZ) * CFrame.Angles(0, math.rad(90), 0), hRoofCol, Enum.Material.WoodPlanks)
                 rWedgeL.Parent = houseModel
 
                 local rWedgeR = makeWedge("Roof_R", Vector3.new(roofD, roofH, halfRoofW),
-                    CFrame.new(houseX + halfRoofW / 2, roofBaseY + roofH / 2, houseZ) * CFrame.Angles(0, math.rad(90), 0), hRoofCol, Enum.Material.WoodPlanks)
+                    CFrame.new(houseX + halfRoofW / 2, roofBaseY + roofH / 2, houseZ) * CFrame.Angles(0, math.rad(-90), 0), hRoofCol, Enum.Material.WoodPlanks)
                 rWedgeR.Parent = houseModel
 
                 -- Hastiales triangulares frontal y trasero recortados exactos
                 local gThick = 0.5
                 local hHalfW = hW / 2
                 local gFL = makeWedge("Gable_FL", Vector3.new(gThick, roofH, hHalfW),
-                    CFrame.new(houseX - hHalfW / 2, roofBaseY + roofH / 2, houseZ + hD / 2) * CFrame.Angles(0, math.rad(-90), 0), hWallCol, Enum.Material.WoodPlanks)
+                    CFrame.new(houseX - hHalfW / 2, roofBaseY + roofH / 2, houseZ + hD / 2) * CFrame.Angles(0, math.rad(90), 0), hWallCol, Enum.Material.WoodPlanks)
                 gFL.Parent = houseModel
                 local gFR = makeWedge("Gable_FR", Vector3.new(gThick, roofH, hHalfW),
-                    CFrame.new(houseX + hHalfW / 2, roofBaseY + roofH / 2, houseZ + hD / 2) * CFrame.Angles(0, math.rad(90), 0), hWallCol, Enum.Material.WoodPlanks)
+                    CFrame.new(houseX + hHalfW / 2, roofBaseY + roofH / 2, houseZ + hD / 2) * CFrame.Angles(0, math.rad(-90), 0), hWallCol, Enum.Material.WoodPlanks)
                 gFR.Parent = houseModel
 
                 local gBL = makeWedge("Gable_BL", Vector3.new(gThick, roofH, hHalfW),
-                    CFrame.new(houseX - hHalfW / 2, roofBaseY + roofH / 2, houseZ - hD / 2) * CFrame.Angles(0, math.rad(-90), 0), hWallCol, Enum.Material.WoodPlanks)
+                    CFrame.new(houseX - hHalfW / 2, roofBaseY + roofH / 2, houseZ - hD / 2) * CFrame.Angles(0, math.rad(90), 0), hWallCol, Enum.Material.WoodPlanks)
                 gBL.Parent = houseModel
                 local gBR = makeWedge("Gable_BR", Vector3.new(gThick, roofH, hHalfW),
-                    CFrame.new(houseX + hHalfW / 2, roofBaseY + roofH / 2, houseZ - hD / 2) * CFrame.Angles(0, math.rad(90), 0), hWallCol, Enum.Material.WoodPlanks)
+                    CFrame.new(houseX + hHalfW / 2, roofBaseY + roofH / 2, houseZ - hD / 2) * CFrame.Angles(0, math.rad(-90), 0), hWallCol, Enum.Material.WoodPlanks)
                 gBR.Parent = houseModel
 
                 -- Chimenea de ladrillo
@@ -396,7 +396,7 @@ local function buildCompleteDistrict()
                 pCol2.Parent = houseModel
 
                 -- Tejadillo del porche (orientado para verter hacia la calle)
-                local pRoofCF = CFrame.new(porchX, bBaseY + 1.4 + porchH + 1.0, porchZ) * (facesSouth and CFrame.Angles(0, 0, 0) or CFrame.Angles(0, math.rad(180), 0))
+                local pRoofCF = CFrame.new(porchX, bBaseY + 1.4 + porchH + 1.0, porchZ) * (facesSouth and CFrame.Angles(0, math.rad(180), 0) or CFrame.Angles(0, 0, 0))
                 local pRoof = makeWedge("Porch_Roof", Vector3.new(porchW + 1.0, 2.0, porchD + 1.0), pRoofCF, hRoofCol, Enum.Material.WoodPlanks)
                 pRoof.Parent = houseModel
 

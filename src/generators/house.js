@@ -280,26 +280,26 @@ local function buildRealisticHouse()
         -- Tejado a 4 aguas (Hip Roof)
         local hipH = roofH
         local halfD = (hD + eaveHang * 2) / 2
-        -- Falda izquierda y derecha
+        -- Falda izquierda y derecha (elevadas hacia la cumbrera en houseX)
         makeWedge("Roof_Hip_L", Vector3.new(roofTotalD, hipH, halfHW),
-            CFrame.new(houseX - halfHW / 2, roofBaseY + hipH / 2, houseZ) * CFrame.Angles(0, math.rad(-90), 0), colRoof, matRoof)
+            CFrame.new(houseX - halfHW / 2, roofBaseY + hipH / 2, houseZ) * CFrame.Angles(0, math.rad(90), 0), colRoof, matRoof)
         makeWedge("Roof_Hip_R", Vector3.new(roofTotalD, hipH, halfHW),
-            CFrame.new(houseX + halfHW / 2, roofBaseY + hipH / 2, houseZ) * CFrame.Angles(0, math.rad(90), 0), colRoof, matRoof)
+            CFrame.new(houseX + halfHW / 2, roofBaseY + hipH / 2, houseZ) * CFrame.Angles(0, math.rad(-90), 0), colRoof, matRoof)
         -- Falda frontal y trasera
         makeWedge("Roof_Hip_F", Vector3.new(hW + eaveHang * 2, hipH, halfD),
-            CFrame.new(houseX, roofBaseY + hipH / 2, houseZ + halfD / 2), colRoof, matRoof)
+            CFrame.new(houseX, roofBaseY + hipH / 2, houseZ + halfD / 2) * CFrame.Angles(0, math.rad(180), 0), colRoof, matRoof)
         makeWedge("Roof_Hip_B", Vector3.new(hW + eaveHang * 2, hipH, halfD),
-            CFrame.new(houseX, roofBaseY + hipH / 2, houseZ - halfD / 2) * CFrame.Angles(0, math.rad(180), 0), colRoof, matRoof)
+            CFrame.new(houseX, roofBaseY + hipH / 2, houseZ - halfD / 2), colRoof, matRoof)
 
     else
         -- TEJADO A DOS AGUAS (GABLE ROOF) CON HASTIALES TRIANGULARES PERFECTOS
-        -- Faldas izquierda y derecha
+        -- Faldas izquierda y derecha (Elevadas hacia la cumbrera central)
         local leftSlopeCF = CFrame.new(houseX - halfHW / 2, roofBaseY + roofH / 2, houseZ)
-            * CFrame.Angles(0, math.rad(-90), 0)
+            * CFrame.Angles(0, math.rad(90), 0)
         makeWedge("Roof_Slope_Left", Vector3.new(roofTotalD, roofH, halfHW), leftSlopeCF, colRoof, matRoof)
 
         local rightSlopeCF = CFrame.new(houseX + halfHW / 2, roofBaseY + roofH / 2, houseZ)
-            * CFrame.Angles(0, math.rad(90), 0)
+            * CFrame.Angles(0, math.rad(-90), 0)
         makeWedge("Roof_Slope_Right", Vector3.new(roofTotalD, roofH, halfHW), rightSlopeCF, colRoof, matRoof)
 
         -- Cumbrera superior (Ridge Cap)
@@ -313,20 +313,20 @@ local function buildRealisticHouse()
 
         -- Hastial Frontal (+Z): mitades izquierda y derecha
         local fGableL_CF = CFrame.new(houseX - halfW / 2, roofBaseY + roofH / 2, houseZ + hD / 2)
-            * CFrame.Angles(0, math.rad(-90), 0)
+            * CFrame.Angles(0, math.rad(90), 0)
         makeWedge("Gable_Tri_FL", Vector3.new(gableThick, roofH, halfW), fGableL_CF, colWall, matWall)
 
         local fGableR_CF = CFrame.new(houseX + halfW / 2, roofBaseY + roofH / 2, houseZ + hD / 2)
-            * CFrame.Angles(0, math.rad(90), 0)
+            * CFrame.Angles(0, math.rad(-90), 0)
         makeWedge("Gable_Tri_FR", Vector3.new(gableThick, roofH, halfW), fGableR_CF, colWall, matWall)
 
         -- Hastial Trasero (-Z): mitades izquierda y derecha
         local bGableL_CF = CFrame.new(houseX - halfW / 2, roofBaseY + roofH / 2, houseZ - hD / 2)
-            * CFrame.Angles(0, math.rad(-90), 0)
+            * CFrame.Angles(0, math.rad(90), 0)
         makeWedge("Gable_Tri_BL", Vector3.new(gableThick, roofH, halfW), bGableL_CF, colWall, matWall)
 
         local bGableR_CF = CFrame.new(houseX + halfW / 2, roofBaseY + roofH / 2, houseZ - hD / 2)
-            * CFrame.Angles(0, math.rad(90), 0)
+            * CFrame.Angles(0, math.rad(-90), 0)
         makeWedge("Gable_Tri_BR", Vector3.new(gableThick, roofH, halfW), bGableR_CF, colWall, matWall)
 
         -- Ventana redonda u óculo en el hastial frontal con orientación cilíndrica correcta
@@ -377,7 +377,7 @@ local function buildRealisticHouse()
     makePart("Porch_Post_2", colSize, CFrame.new(porchX + porchW / 2 - 0.6, houseBaseY + porchDeckH + porchH / 2, porchZ + porchD / 2 - 0.6), colTrim, Enum.Material.WoodPlanks, true)
 
     -- TEJADILLO A UN AGUA SOBRE EL PORCHE (Orientación corregida: vierte hacia el jardín frontal +Z)
-    local pRoofCF = CFrame.new(porchX, houseBaseY + porchDeckH + porchH + 1.2, porchZ)
+    local pRoofCF = CFrame.new(porchX, houseBaseY + porchDeckH + porchH + 1.2, porchZ) * CFrame.Angles(0, math.rad(180), 0)
     makeWedge("Porch_Roof", Vector3.new(porchW + 1.2, 2.4, porchD + 0.8), pRoofCF, colRoof, matRoof)
 
     -- Barandillas de madera perimetrales del porche
@@ -409,13 +409,15 @@ local function buildRealisticHouse()
         : ""
     }
 
-    -- 5. VENTANAS RESIDENCIALES 3D SIN SOLAPAMIENTOS
+    -- 5. VENTANAS RESIDENCIALES 3D SIN SOLAPAMIENTOS NI Z-FIGHTING
     local function spawnHouseWindow(winName, relCF, hasShutters)
         local wW, wH = 3.4, 4.8
         -- Marco exterior
-        makePart(winName .. "_Frame", Vector3.new(wW + 0.6, wH + 0.6, 0.3), relCF, colTrim, Enum.Material.WoodPlanks, false, true)
+        makePart(winName .. "_Frame", Vector3.new(wW + 0.6, wH + 0.6, 0.35), relCF, colTrim, Enum.Material.WoodPlanks, false, true)
+        -- Fondo interior opaco para eliminar colisión con el bloque de pared
+        makePart(winName .. "_Backing", Vector3.new(wW, wH, 0.05), relCF * CFrame.new(0, 0, -0.05), Color3.fromRGB(30, 32, 36), Enum.Material.SmoothPlastic, false, true)
         -- Cristal
-        local glass = makePart(winName .. "_Glass", Vector3.new(wW, wH, 0.2), relCF * CFrame.new(0, 0, 0.05), Color3.fromRGB(215, 230, 245), Enum.Material.Glass, false, true)
+        local glass = makePart(winName .. "_Glass", Vector3.new(wW, wH, 0.15), relCF * CFrame.new(0, 0, 0.08), Color3.fromRGB(215, 230, 245), Enum.Material.Glass, false, true)
         glass.Transparency = 0.35
         glass.Reflectance = 0.3
 
@@ -431,14 +433,14 @@ local function buildRealisticHouse()
         end
 
         -- Alféizar inferior
-        makePart(winName .. "_Sill", Vector3.new(wW + 0.8, 0.3, 0.5), relCF * CFrame.new(0, -wH / 2 - 0.2, 0.15), colTrim, Enum.Material.WoodPlanks, false, true)
+        makePart(winName .. "_Sill", Vector3.new(wW + 0.8, 0.3, 0.5), relCF * CFrame.new(0, -wH / 2 - 0.2, 0.18), colTrim, Enum.Material.WoodPlanks, false, true)
 
         -- Contraventanas laterales (Shutters) colocadas fuera del marco sin superposición
         if hasShutters then
             local shutW = 1.1
             local shutOffset = wW / 2 + shutW / 2 + 0.2
-            makePart(winName .. "_Shutter_L", Vector3.new(shutW, wH, 0.2), relCF * CFrame.new(-shutOffset, 0, 0.08), colShutter, Enum.Material.WoodPlanks, false, true)
-            makePart(winName .. "_Shutter_R", Vector3.new(shutW, wH, 0.2), relCF * CFrame.new(shutOffset, 0, 0.08), colShutter, Enum.Material.WoodPlanks, false, true)
+            makePart(winName .. "_Shutter_L", Vector3.new(shutW, wH, 0.2), relCF * CFrame.new(-shutOffset, 0, 0.12), colShutter, Enum.Material.WoodPlanks, false, true)
+            makePart(winName .. "_Shutter_R", Vector3.new(shutW, wH, 0.2), relCF * CFrame.new(shutOffset, 0, 0.12), colShutter, Enum.Material.WoodPlanks, false, true)
         end
     end
 
@@ -505,16 +507,16 @@ local function buildRealisticHouse()
     -- Tejadillo del garaje a dos aguas con hastial frontal recortado
     local gRoofH = 3.6
     local gRoofBaseY = houseBaseY + garH
-    local gRoofCF_L = CFrame.new(garX - garW / 4, gRoofBaseY + gRoofH / 2, garZ) * CFrame.Angles(0, math.rad(-90), 0)
+    local gRoofCF_L = CFrame.new(garX - garW / 4, gRoofBaseY + gRoofH / 2, garZ) * CFrame.Angles(0, math.rad(90), 0)
     makeWedge("Garage_Roof_L", Vector3.new(garD + 1.2, gRoofH, garW / 2 + 0.6), gRoofCF_L, colRoof, matRoof)
 
-    local gRoofCF_R = CFrame.new(garX + garW / 4, gRoofBaseY + gRoofH / 2, garZ) * CFrame.Angles(0, math.rad(90), 0)
+    local gRoofCF_R = CFrame.new(garX + garW / 4, gRoofBaseY + gRoofH / 2, garZ) * CFrame.Angles(0, math.rad(-90), 0)
     makeWedge("Garage_Roof_R", Vector3.new(garD + 1.2, gRoofH, garW / 2 + 0.6), gRoofCF_R, colRoof, matRoof)
 
     -- Hastial triangular frontal del garaje
-    local gGableL_CF = CFrame.new(garX - garW / 4, gRoofBaseY + gRoofH / 2, garZ + garD / 2) * CFrame.Angles(0, math.rad(-90), 0)
+    local gGableL_CF = CFrame.new(garX - garW / 4, gRoofBaseY + gRoofH / 2, garZ + garD / 2) * CFrame.Angles(0, math.rad(90), 0)
     makeWedge("Garage_Gable_L", Vector3.new(0.4, gRoofH, garW / 2), gGableL_CF, colWall, matWall)
-    local gGableR_CF = CFrame.new(garX + garW / 4, gRoofBaseY + gRoofH / 2, garZ + garD / 2) * CFrame.Angles(0, math.rad(90), 0)
+    local gGableR_CF = CFrame.new(garX + garW / 4, gRoofBaseY + gRoofH / 2, garZ + garD / 2) * CFrame.Angles(0, math.rad(-90), 0)
     makeWedge("Garage_Gable_R", Vector3.new(0.4, gRoofH, garW / 2), gGableR_CF, colWall, matWall)
 
     -- Portón de garaje seccional

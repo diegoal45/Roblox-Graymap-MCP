@@ -163,34 +163,36 @@ local function buildMotel()
 
     local function spawnRoomUnit(roomNum, floorIdx, rX)
         local rBaseY = 1.4 + (floorIdx - 1) * floorH
-        local facadeZ = motelD / 2 + 0.05
+        local facadeZ = motelD / 2 + 0.25
 
         -- Puerta de la habitación con marco
         local doorW, doorH = 3.6, 7.8
         local doorX = rX - 2.8
         local doorCF = CFrame.new(doorX, rBaseY + doorH / 2 + 0.2, facadeZ)
         makePart("Door_Frame_" .. roomNum, Vector3.new(doorW + 0.6, doorH + 0.4, 0.4), doorCF, Color3.fromRGB(240, 240, 245), Enum.Material.WoodPlanks, true)
-        makePart("Door_Leaf_" .. roomNum, Vector3.new(doorW, doorH, 0.3), doorCF * CFrame.new(0, 0, 0.05), colDoor, Enum.Material.WoodPlanks, true)
+        makePart("Door_Leaf_" .. roomNum, Vector3.new(doorW, doorH, 0.3), doorCF * CFrame.new(0, 0, 0.1), colDoor, Enum.Material.WoodPlanks, true)
         -- Pomo de latón
-        makePart("Door_Knob_" .. roomNum, Vector3.new(0.2, 0.2, 0.25), doorCF * CFrame.new(1.3, -0.2, 0.25), Color3.fromRGB(225, 195, 60), Enum.Material.Metal, false, true)
+        makePart("Door_Knob_" .. roomNum, Vector3.new(0.25, 0.25, 0.3), doorCF * CFrame.new(1.3, -0.2, 0.3), Color3.fromRGB(225, 195, 60), Enum.Material.Metal, false, true)
 
         -- Plaquita con el número de habitación (ej: "101")
-        makePart("Plate_Num_" .. roomNum, Vector3.new(0.8, 0.4, 0.1), doorCF * CFrame.new(0, 1.6, 0.22), Color3.fromRGB(220, 190, 50), Enum.Material.SmoothPlastic, false, true)
+        makePart("Plate_Num_" .. roomNum, Vector3.new(0.8, 0.4, 0.1), doorCF * CFrame.new(0, 1.6, 0.28), Color3.fromRGB(220, 190, 50), Enum.Material.SmoothPlastic, false, true)
 
         -- Farol cálido exterior sobre la puerta
-        local lamp = makePart("Room_Lamp_" .. roomNum, Vector3.new(0.7, 0.8, 0.5), CFrame.new(doorX, rBaseY + doorH + 1.2, facadeZ + 0.3), Color3.fromRGB(255, 235, 175), Enum.Material.Neon, false, true)
+        local lamp = makePart("Room_Lamp_" .. roomNum, Vector3.new(0.7, 0.8, 0.5), CFrame.new(doorX, rBaseY + doorH + 1.2, facadeZ + 0.35), Color3.fromRGB(255, 235, 175), Enum.Material.Neon, false, true)
         local pl = Instance.new("PointLight", lamp)
         pl.Color = Color3.fromRGB(255, 230, 180)
         pl.Range = 12
         pl.Brightness = 1.2
 
-        -- Ventana con cortinas y cristal
+        -- Ventana con cortinas y cristal (sin z-fighting con la pared de hormigón)
         local winW, winH = 4.0, 4.5
         local winX = rX + 2.4
         local winY = rBaseY + 5.2
         local winCF = CFrame.new(winX, winY, facadeZ)
-        makePart("Win_Frame_" .. roomNum, Vector3.new(winW + 0.6, winH + 0.6, 0.3), winCF, Color3.fromRGB(240, 240, 245), Enum.Material.WoodPlanks, false, true)
-        local glass = makePart("Win_Glass_" .. roomNum, Vector3.new(winW, winH, 0.2), winCF * CFrame.new(0, 0, 0.05), Color3.fromRGB(180, 215, 240), Enum.Material.Glass, false, true)
+        makePart("Win_Frame_" .. roomNum, Vector3.new(winW + 0.6, winH + 0.6, 0.35), winCF, Color3.fromRGB(240, 240, 245), Enum.Material.WoodPlanks, false, true)
+        -- Fondo interior opaco para anular el conflicto de transparencia con la pared
+        makePart("Win_Backing_" .. roomNum, Vector3.new(winW, winH, 0.05), winCF * CFrame.new(0, 0, -0.05), Color3.fromRGB(28, 30, 35), Enum.Material.SmoothPlastic, false, true)
+        local glass = makePart("Win_Glass_" .. roomNum, Vector3.new(winW, winH, 0.15), winCF * CFrame.new(0, 0, 0.1), Color3.fromRGB(180, 215, 240), Enum.Material.Glass, false, true)
         glass.Transparency = 0.35
 
         -- Luz interior en algunas habitaciones

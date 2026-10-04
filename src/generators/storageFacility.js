@@ -123,8 +123,24 @@ local function buildStorageFacility()
         local rowZ = startRowZ + (r - 1) * (unitD + aisleW)
         local bCF = CFrame.new(-totalW / 2 + bW / 2 + 6, 1.2 + unitH / 2, rowZ)
 
-        -- Estructura del bloque de trasteros
-        makePart("Building_Row_" .. r, Vector3.new(bW, unitH, unitD), bCF, Color3.fromRGB(220, 218, 212), Enum.Material.Concrete, true)
+        -- Estructura del bloque de trasteros (ahuecado si contiene el laboratorio secreto)
+        if r == 1 and ${hasSecretLabUnit ? "true" : "false"} then
+            local leftW = 2 * unitW
+            local rightW = (numUnits - 3) * unitW
+            local secretX = -totalW / 2 + 6 + 2.5 * unitW
+            if leftW > 0 then
+                makePart("Building_Row_1_Left", Vector3.new(leftW, unitH, unitD), CFrame.new(-totalW / 2 + 6 + leftW / 2, 1.2 + unitH / 2, rowZ), Color3.fromRGB(220, 218, 212), Enum.Material.Concrete, true)
+            end
+            if rightW > 0 then
+                makePart("Building_Row_1_Right", Vector3.new(rightW, unitH, unitD), CFrame.new(-totalW / 2 + 6 + 3 * unitW + rightW / 2, 1.2 + unitH / 2, rowZ), Color3.fromRGB(220, 218, 212), Enum.Material.Concrete, true)
+            end
+            -- Pared trasera del trastero secreto
+            makePart("Secret_Back_Wall", Vector3.new(unitW, unitH, 1.0), CFrame.new(secretX, 1.2 + unitH / 2, rowZ - unitD / 2 + 0.5), Color3.fromRGB(220, 218, 212), Enum.Material.Concrete, true)
+            -- Techo del trastero secreto
+            makePart("Secret_Ceiling", Vector3.new(unitW, 0.8, unitD), CFrame.new(secretX, 1.2 + unitH - 0.4, rowZ), Color3.fromRGB(220, 218, 212), Enum.Material.Concrete, true)
+        else
+            makePart("Building_Row_" .. r, Vector3.new(bW, unitH, unitD), bCF, Color3.fromRGB(220, 218, 212), Enum.Material.Concrete, true)
+        end
 
         -- Tejadillo metálico a un agua
         local roofH = 2.4
@@ -132,7 +148,7 @@ local function buildStorageFacility()
         makeWedge("Roof_Slope_" .. r, Vector3.new(bW + 1.2, roofH, unitD + 1.2), roofCF, Color3.fromRGB(70, 75, 82), Enum.Material.Metal)
 
         -- Persianas individuales de cada trastero
-        local faceZ = rowZ + unitD / 2 + 0.1
+        local faceZ = rowZ + unitD / 2 + 0.14
         for u = 1, numUnits do
             local uX = -totalW / 2 + 6 + (u - 0.5) * unitW
             local doorW, doorH = unitW - 1.6, unitH - 1.4
@@ -142,20 +158,19 @@ local function buildStorageFacility()
             local isSecretUnit = ${hasSecretLabUnit ? "true" : "false"} and (r == 1 and u == 3)
 
             if not isSecretUnit then
-                -- Persiana cerrada con ranuras
+                -- Persiana cerrada con ranuras (grosor 0.2, despejado del muro)
                 local doorCF = CFrame.new(uX, 1.2 + doorH / 2 + 0.2, faceZ)
-                makePart("RollDoor_" .. unitCode, Vector3.new(doorW, doorH, 0.4), doorCF, dCol, Enum.Material.DiamondPlate, true)
+                makePart("RollDoor_" .. unitCode, Vector3.new(doorW, doorH, 0.2), doorCF, dCol, Enum.Material.DiamondPlate, true)
                 -- Cerrojo / Candado metálico inferior
-                makePart("Padlock_" .. unitCode, Vector3.new(0.6, 0.8, 0.4), doorCF * CFrame.new(0, -doorH / 2 + 1.0, 0.25), Color3.fromRGB(215, 185, 45), Enum.Material.Metal, false, true)
+                makePart("Padlock_" .. unitCode, Vector3.new(0.6, 0.8, 0.3), doorCF * CFrame.new(0, -doorH / 2 + 1.0, 0.15), Color3.fromRGB(215, 185, 45), Enum.Material.Metal, false, true)
             else
                 -- 3. UNIDAD SECRETA ACCESIBLE (LABORATORIO / ZONA FRANCA CLANDESTINA)
                 -- Puerta enrollable abierta a media altura (3 studs abierta)
                 local openH = doorH - 4.5
                 local doorOpenCF = CFrame.new(uX, 1.2 + openH / 2 + 4.5, faceZ)
-                makePart("Secret_RollDoor", Vector3.new(doorW, openH, 0.4), doorOpenCF, dCol, Enum.Material.DiamondPlate, true)
+                makePart("Secret_RollDoor", Vector3.new(doorW, openH, 0.2), doorOpenCF, dCol, Enum.Material.DiamondPlate, true)
 
-                -- Interior del trastero: hueco transitable
-                local intCF = CFrame.new(uX, 1.2, rowZ)
+                -- Interior del trastero: hueco transitable despejado
                 -- Mesa de trabajo / pesaje
                 makePart("Lab_Workbench", Vector3.new(6.5, 3.2, 3.0), CFrame.new(uX, 1.2 + 1.6, rowZ - 2), Color3.fromRGB(115, 80, 50), Enum.Material.WoodPlanks, true)
                 -- Báscula digital y maletín de billetes
@@ -176,11 +191,11 @@ local function buildStorageFacility()
             end
 
             -- Cartelito con el número de trastero sobre la persiana
-            makePart("Sign_Num_" .. unitCode, Vector3.new(2.2, 0.8, 0.1), CFrame.new(uX, 1.2 + unitH - 0.6, faceZ + 0.1), Color3.fromRGB(35, 38, 44), Enum.Material.SmoothPlastic, false, true)
+            makePart("Sign_Num_" .. unitCode, Vector3.new(2.2, 0.8, 0.1), CFrame.new(uX, 1.2 + unitH - 0.6, faceZ + 0.12), Color3.fromRGB(35, 38, 44), Enum.Material.SmoothPlastic, false, true)
 
             -- Foco exterior nocturno entre persianas
             if u % 2 == 1 then
-                local lampP = makePart("Unit_Lamp_" .. unitCode, Vector3.new(0.6, 0.6, 0.5), CFrame.new(uX, 1.2 + unitH - 0.2, faceZ + 0.4), Color3.fromRGB(255, 235, 180), Enum.Material.Neon, false, true)
+                local lampP = makePart("Unit_Lamp_" .. unitCode, Vector3.new(0.6, 0.6, 0.5), CFrame.new(uX, 1.2 + unitH - 0.2, faceZ + 0.35), Color3.fromRGB(255, 235, 180), Enum.Material.Neon, false, true)
                 local uLight = Instance.new("PointLight", lampP)
                 uLight.Color = Color3.fromRGB(255, 225, 160)
                 uLight.Range = 14
@@ -198,8 +213,10 @@ local function buildStorageFacility()
     local offZ = totalD / 2 - offD / 2 - 4
     makePart("Office_Cabin", Vector3.new(offW, offH, offD), CFrame.new(offX, 1.2 + offH / 2, offZ), Color3.fromRGB(230, 232, 238), Enum.Material.Concrete, true)
 
-    -- Ventanal de control
-    local offGlass = makePart("Office_Window", Vector3.new(offW - 2, 4.5, 0.3), CFrame.new(offX, 1.2 + 5.5, offZ - offD / 2 - 0.1), Color3.fromRGB(170, 210, 240), Enum.Material.Glass, false, true)
+    -- Ventanal de control con respaldo opaco y cristal desfasado
+    local offFrontZ = offZ - offD / 2
+    makePart("Office_Window_Backing", Vector3.new(offW - 2, 4.5, 0.04), CFrame.new(offX, 1.2 + 5.5, offFrontZ - 0.03), Color3.fromRGB(22, 25, 30), Enum.Material.SmoothPlastic, false, true)
+    local offGlass = makePart("Office_Window", Vector3.new(offW - 2, 4.5, 0.06), CFrame.new(offX, 1.2 + 5.5, offFrontZ - 0.10), Color3.fromRGB(170, 210, 240), Enum.Material.Glass, false, true)
     offGlass.Transparency = 0.35
 
     -- Teclado de código PIN para entrar en el complejo

@@ -167,19 +167,25 @@ local function buildLandmark()
 
         -- Escaparates de cristal de suelo a techo en fachada frontal (+Z de la tienda)
         local glassW = storeW * 0.7
-        local sFrontZ = storeZ + storeD / 2 + 0.1
-        local shopGlass = makePart("Store_Showcase_Glass", Vector3.new(glassW, 8.5, 0.3), CFrame.new(0, 1.2 + 5.5, sFrontZ), Color3.fromRGB(160, 210, 240), Enum.Material.Glass, false, true)
+        local sFrontZ = storeZ + storeD / 2
+
+        -- Respaldo oscuro opaco para evitar parpadeo contra el muro de hormigón
+        makePart("Store_Showcase_Backing", Vector3.new(glassW, 8.5, 0.05), CFrame.new(0, 1.2 + 5.5, sFrontZ + 0.03), Color3.fromRGB(24, 26, 30), Enum.Material.SmoothPlastic, false, true)
+
+        -- Cristal del escaparate por delante del respaldo
+        local shopGlass = makePart("Store_Showcase_Glass", Vector3.new(glassW, 8.5, 0.06), CFrame.new(0, 1.2 + 5.5, sFrontZ + 0.10), Color3.fromRGB(160, 210, 240), Enum.Material.Glass, false, true)
         shopGlass.Transparency = 0.35
         shopGlass.Reflectance = 0.45
 
-        -- Doble puerta acristalada automática
-        local doorP = makePart("Store_Entrance_Door", Vector3.new(6.4, 8.0, 0.4), CFrame.new(0, 1.2 + 4.0, sFrontZ + 0.1), Color3.fromRGB(45, 50, 58), Enum.Material.Metal, true)
-        local dGlass = makePart("Store_Door_Glass", Vector3.new(5.6, 7.2, 0.2), CFrame.new(0, 1.2 + 4.0, sFrontZ + 0.1), Color3.fromRGB(180, 220, 250), Enum.Material.Glass, false, true)
+        -- Doble puerta acristalada automática con capas ordenadas sin coplanaridad
+        local doorFrame = makePart("Store_Door_Frame", Vector3.new(6.6, 8.2, 0.25), CFrame.new(0, 1.2 + 4.0, sFrontZ + 0.16), Color3.fromRGB(45, 50, 58), Enum.Material.Metal, true)
+        makePart("Store_Door_Backing", Vector3.new(5.8, 7.4, 0.04), CFrame.new(0, 1.2 + 4.0, sFrontZ + 0.18), Color3.fromRGB(20, 22, 26), Enum.Material.SmoothPlastic, false, true)
+        local dGlass = makePart("Store_Door_Glass", Vector3.new(5.8, 7.4, 0.04), CFrame.new(0, 1.2 + 4.0, sFrontZ + 0.24), Color3.fromRGB(180, 220, 250), Enum.Material.Glass, false, true)
         dGlass.Transparency = 0.35
 
         -- Rótulo luminoso 3D gigante "24-7 CONVENIENCE STORE"
-        local signBox = makePart("Store_Signboard", Vector3.new(glassW + 4, 2.6, 0.8), CFrame.new(0, 1.2 + 10.8, sFrontZ + 0.4), Color3.fromRGB(35, 38, 44), Enum.Material.SmoothPlastic, false, true)
-        local neonSign = makePart("Store_Neon_Logo", Vector3.new(glassW + 2, 1.6, 0.3), CFrame.new(0, 1.2 + 10.8, sFrontZ + 0.8), Color3.fromRGB(255, 235, 60), Enum.Material.Neon, false, true)
+        local signBox = makePart("Store_Signboard", Vector3.new(glassW + 4, 2.6, 0.5), CFrame.new(0, 1.2 + 10.8, sFrontZ + 0.40), Color3.fromRGB(35, 38, 44), Enum.Material.SmoothPlastic, false, true)
+        local neonSign = makePart("Store_Neon_Logo", Vector3.new(glassW + 2, 1.6, 0.2), CFrame.new(0, 1.2 + 10.8, sFrontZ + 0.70), Color3.fromRGB(255, 235, 60), Enum.Material.Neon, false, true)
         local sL = Instance.new("PointLight", neonSign)
         sL.Color = Color3.fromRGB(255, 230, 80)
         sL.Range = 18
@@ -190,9 +196,10 @@ local function buildLandmark()
         local totemX = lotW / 2 - 8
         local totemZ = lotD / 2 - 8
         local poleTotem = makePart("Price_Totem_Pole", Vector3.new(1.4, 26, 1.4), CFrame.new(totemX, 1.2 + 13, totemZ), Color3.fromRGB(55, 60, 68), Enum.Material.Metal, true)
-        local boardTotem = makePart("Price_Totem_Board", Vector3.new(8.0, 11, 2.0), CFrame.new(totemX, 1.2 + 20, totemZ), Color3.fromRGB(210, 35, 35), Enum.Material.SmoothPlastic, false, true)
-        local priceDigits = makePart("Price_Digits_Neon", Vector3.new(6.8, 8.5, 2.2), CFrame.new(totemX, 1.2 + 20, totemZ), Color3.fromRGB(80, 255, 100), Enum.Material.Neon, false, true)
-        local tL = Instance.new("PointLight", priceDigits)
+        local boardTotem = makePart("Price_Totem_Board", Vector3.new(8.0, 11, 1.6), CFrame.new(totemX, 1.2 + 20, totemZ), Color3.fromRGB(210, 35, 35), Enum.Material.SmoothPlastic, false, true)
+        local priceDigitsF = makePart("Price_Digits_Front", Vector3.new(6.8, 8.5, 0.1), CFrame.new(totemX, 1.2 + 20, totemZ + 0.86), Color3.fromRGB(80, 255, 100), Enum.Material.Neon, false, true)
+        local priceDigitsB = makePart("Price_Digits_Back", Vector3.new(6.8, 8.5, 0.1), CFrame.new(totemX, 1.2 + 20, totemZ - 0.86), Color3.fromRGB(80, 255, 100), Enum.Material.Neon, false, true)
+        local tL = Instance.new("PointLight", priceDigitsF)
         tL.Color = Color3.fromRGB(80, 255, 100)
         tL.Range = 22
         tL.Brightness = 1.5
@@ -211,7 +218,7 @@ local function buildLandmark()
         for p = 1, 4 do
             local parkX = -storeW / 2 + 10 + (p - 1) * 9
             local parkZ = storeZ + storeD / 2 + 8
-            -- Líneas delimitadoras de plaza
+            -- Líneas delimitadoras de plaza ligeramente sobre el asfalto (0.04 studs)
             makePart("Park_Line_L_" .. p, Vector3.new(0.4, 0.05, 14), CFrame.new(parkX - 4, 1.23, parkZ), Color3.fromRGB(245, 245, 245), Enum.Material.SmoothPlastic, false, true)
             makePart("Park_Line_R_" .. p, Vector3.new(0.4, 0.05, 14), CFrame.new(parkX + 4, 1.23, parkZ), Color3.fromRGB(245, 245, 245), Enum.Material.SmoothPlastic, false, true)
             -- Tope de rueda de hormigón (Wheel stop)
@@ -233,17 +240,18 @@ local function buildLandmark()
         -- Banda roja decorativa en la parte superior (fascia retro)
         makePart("Diner_Roof_Trim", Vector3.new(bW + 1.0, 1.6, bD + 1.0), CFrame.new(bX, 1.2 + bH + 0.8, bZ), Color3.fromRGB(210, 40, 35), Enum.Material.SmoothPlastic, false, true)
 
-        -- Gran ventanal panorámico de mesas
-        local frontZ = bZ + bD / 2 + 0.1
-        local dGlass = makePart("Diner_Front_Glass", Vector3.new(bW * 0.7, 7.5, 0.3), CFrame.new(bX, 1.2 + 5.0, frontZ), Color3.fromRGB(180, 220, 245), Enum.Material.Glass, false, true)
+        -- Gran ventanal panorámico de mesas con respaldo oscuro y cristal desfasado
+        local frontZ = bZ + bD / 2
+        makePart("Diner_Window_Backing", Vector3.new(bW * 0.7, 7.5, 0.05), CFrame.new(bX, 1.2 + 5.0, frontZ + 0.03), Color3.fromRGB(25, 28, 32), Enum.Material.SmoothPlastic, false, true)
+        local dGlass = makePart("Diner_Front_Glass", Vector3.new(bW * 0.7, 7.5, 0.06), CFrame.new(bX, 1.2 + 5.0, frontZ + 0.10), Color3.fromRGB(180, 220, 245), Enum.Material.Glass, false, true)
         dGlass.Transparency = 0.35
 
         -- Puerta de entrada con tirador
-        makePart("Diner_Door", Vector3.new(4.5, 7.5, 0.4), CFrame.new(bX + bW / 2 - 4.5, 1.2 + 3.75, frontZ), Color3.fromRGB(50, 54, 62), Enum.Material.Metal, true)
+        makePart("Diner_Door", Vector3.new(4.5, 7.5, 0.3), CFrame.new(bX + bW / 2 - 4.5, 1.2 + 3.75, frontZ + 0.18), Color3.fromRGB(50, 54, 62), Enum.Material.Metal, true)
 
         -- Rótulo frontal iluminado "BURGER SHOT / DINER"
-        local dinerSign = makePart("Diner_Front_Sign", Vector3.new(24, 3.2, 0.6), CFrame.new(bX, 1.2 + bH + 2.8, frontZ + 0.2), Color3.fromRGB(35, 38, 44), Enum.Material.SmoothPlastic, false, true)
-        local dinerNeon = makePart("Diner_Neon_Text", Vector3.new(22, 2.2, 0.3), CFrame.new(bX, 1.2 + bH + 2.8, frontZ + 0.6), Color3.fromRGB(255, 185, 40), Enum.Material.Neon, false, true)
+        local dinerSign = makePart("Diner_Front_Sign", Vector3.new(24, 3.2, 0.5), CFrame.new(bX, 1.2 + bH + 2.8, frontZ + 0.3), Color3.fromRGB(35, 38, 44), Enum.Material.SmoothPlastic, false, true)
+        local dinerNeon = makePart("Diner_Neon_Text", Vector3.new(22, 2.2, 0.2), CFrame.new(bX, 1.2 + bH + 2.8, frontZ + 0.68), Color3.fromRGB(255, 185, 40), Enum.Material.Neon, false, true)
         local dL = Instance.new("PointLight", dinerNeon)
         dL.Color = Color3.fromRGB(255, 180, 40)
         dL.Range = 22
@@ -257,8 +265,10 @@ local function buildLandmark()
         local speakerBox = makePart("Speaker_Mic", Vector3.new(0.6, 1.0, 1.0), CFrame.new(driveLaneX + 5.2, 1.2 + 3.0, bZ + 2.5), Color3.fromRGB(30, 32, 38), Enum.Material.Metal, true)
 
         -- Ventanilla de recogida de pedidos (Pickup Window) en la pared del restaurante
-        local windowCF = CFrame.new(bX + bW / 2 + 0.1, 1.2 + 4.8, bZ - 4) * CFrame.Angles(0, math.rad(90), 0)
-        makePart("Pickup_Window_Glass", Vector3.new(3.8, 3.2, 0.3), windowCF, Color3.fromRGB(160, 205, 240), Enum.Material.Glass, false, true)
+        local wallFaceX = bX + bW / 2
+        local windowCF = CFrame.new(wallFaceX, 1.2 + 4.8, bZ - 4) * CFrame.Angles(0, math.rad(90), 0)
+        makePart("Pickup_Window_Backing", Vector3.new(3.8, 3.2, 0.05), windowCF * CFrame.new(0, 0, 0.03), Color3.fromRGB(25, 28, 32), Enum.Material.SmoothPlastic, false, true)
+        makePart("Pickup_Window_Glass", Vector3.new(3.8, 3.2, 0.06), windowCF * CFrame.new(0, 0, 0.10), Color3.fromRGB(160, 205, 240), Enum.Material.Glass, false, true)
         makePart("Pickup_Canopy_Trim", Vector3.new(4.4, 0.4, 1.8), windowCF * CFrame.new(0, 1.8, 0.9), Color3.fromRGB(215, 35, 35), Enum.Material.Metal, false, true)
 
         -- Cartel de poste gigante para autopista (Giant Pole Sign de 32 studs)
@@ -287,14 +297,19 @@ local function buildLandmark()
         -- Banda azul corporativa de policía
         makePart("Police_Blue_Fascia", Vector3.new(bW + 0.6, 1.8, bD + 0.6), CFrame.new(bX, 1.2 + bH / 2, bZ), Color3.fromRGB(30, 60, 135), Enum.Material.SmoothPlastic, false, true)
 
-        -- Portal de entrada monumental con escudo policial
-        local frontZ = bZ + bD / 2 + 0.2
-        makePart("Police_Entrance_Portal", Vector3.new(10, 9.5, 1.4), CFrame.new(bX, 1.2 + 4.75, frontZ), Color3.fromRGB(45, 50, 60), Enum.Material.Granite, true)
-        local pDoors = makePart("Police_Glass_Doors", Vector3.new(8, 8.0, 0.4), CFrame.new(bX, 1.2 + 4.0, frontZ + 0.1), Color3.fromRGB(170, 210, 245), Enum.Material.Glass, false, true)
+        -- Portal de entrada monumental con marco estructural no coplanar
+        local frontZ = bZ + bD / 2
+        makePart("Police_Portal_Frame_L", Vector3.new(1.2, 9.5, 1.2), CFrame.new(bX - 4.6, 1.2 + 4.75, frontZ + 0.6), Color3.fromRGB(45, 50, 60), Enum.Material.Granite, true)
+        makePart("Police_Portal_Frame_R", Vector3.new(1.2, 9.5, 1.2), CFrame.new(bX + 4.6, 1.2 + 4.75, frontZ + 0.6), Color3.fromRGB(45, 50, 60), Enum.Material.Granite, true)
+        makePart("Police_Portal_Lintel", Vector3.new(10.4, 1.5, 1.2), CFrame.new(bX, 1.2 + 8.75, frontZ + 0.6), Color3.fromRGB(45, 50, 60), Enum.Material.Granite, true)
+
+        -- Puertas acristaladas con respaldo opaco
+        makePart("Police_Door_Backing", Vector3.new(8.0, 8.0, 0.05), CFrame.new(bX, 1.2 + 4.0, frontZ + 0.05), Color3.fromRGB(24, 26, 30), Enum.Material.SmoothPlastic, false, true)
+        local pDoors = makePart("Police_Glass_Doors", Vector3.new(8.0, 8.0, 0.06), CFrame.new(bX, 1.2 + 4.0, frontZ + 0.12), Color3.fromRGB(170, 210, 245), Enum.Material.Glass, false, true)
         pDoors.Transparency = 0.35
 
         -- Cartel iluminado "POLICE DEPARTMENT / 71st PRECINCT"
-        local pSign = makePart("Police_Sign_Neon", Vector3.new(14, 2.2, 0.4), CFrame.new(bX, 1.2 + 11.5, frontZ + 0.6), Color3.fromRGB(220, 235, 255), Enum.Material.Neon, false, true)
+        local pSign = makePart("Police_Sign_Neon", Vector3.new(14, 2.2, 0.3), CFrame.new(bX, 1.2 + 11.5, frontZ + 0.4), Color3.fromRGB(220, 235, 255), Enum.Material.Neon, false, true)
         local psl = Instance.new("PointLight", pSign)
         psl.Color = Color3.fromRGB(180, 220, 255)
         psl.Range = 18
@@ -305,9 +320,9 @@ local function buildLandmark()
         local bayH = 8.5
         for bay = 1, 3 do
             local bayX = bX - bW / 2 + 7 + (bay - 1) * 13
-            makePart("Patrol_Bay_Door_" .. bay, Vector3.new(bayW, bayH, 0.4), CFrame.new(bayX, 1.2 + bayH / 2, frontZ - 0.2), Color3.fromRGB(75, 80, 90), Enum.Material.Metal, true)
+            makePart("Patrol_Bay_Door_" .. bay, Vector3.new(bayW, bayH, 0.3), CFrame.new(bayX, 1.2 + bayH / 2, frontZ + 0.15), Color3.fromRGB(75, 80, 90), Enum.Material.Metal, true)
             -- Foco rojo/azul sobre las cocheras
-            local bayLight = makePart("Emergency_Beacon_" .. bay, Vector3.new(1, 0.8, 1), CFrame.new(bayX, 1.2 + bayH + 1.2, frontZ), (bay % 2 == 1) and Color3.fromRGB(255, 30, 30) or Color3.fromRGB(30, 90, 255), Enum.Material.Neon, false, true)
+            local bayLight = makePart("Emergency_Beacon_" .. bay, Vector3.new(1, 0.8, 1), CFrame.new(bayX, 1.2 + bayH + 1.2, frontZ + 0.5), (bay % 2 == 1) and Color3.fromRGB(255, 30, 30) or Color3.fromRGB(30, 90, 255), Enum.Material.Neon, false, true)
             bayLight.Shape = Enum.PartType.Ball
         end
 

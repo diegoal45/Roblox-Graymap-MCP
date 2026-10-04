@@ -88,12 +88,13 @@ local function buildStreet()
     local rW = ${roadWidth}
     local sW = ${sidewalkWidth}
     local curbW = 0.8
-    local curbH = 0.65
+    local curbH = 0.8
 
-    -- 1. Calzada de Asfalto (rebajada -0.5 studs)
-    makePart("Asphalt_Road", Vector3.new(rW, 1.2, length), CFrame.new(0, -0.6, 0), Color3.fromRGB(38, 40, 44), Enum.Material.Concrete)
+    -- 1. Calzada de Asfalto (Elevada a +0.3 studs sobre la cota 0 del terreno para anular el z-fighting con la base)
+    local roadSurfaceY = 0.3
+    makePart("Asphalt_Road", Vector3.new(rW, 1.6, length), CFrame.new(0, roadSurfaceY - 0.8, 0), Color3.fromRGB(38, 40, 44), Enum.Material.Concrete)
 
-    -- 2. Aceras y Bordillos de Granito
+    -- 2. Aceras y Bordillos de Granito (Elevados sobre la calzada)
     ${
       hasSidewalks
         ? `
@@ -101,30 +102,31 @@ local function buildStreet()
     local curbColor = Color3.fromRGB(150, 155, 162)
     local leftOffset = - (rW / 2) - (sW / 2)
     local rightOffset = (rW / 2) + (sW / 2)
+    local swCenterY = roadSurfaceY + curbH / 2
 
     -- Aceras peatonales
-    makePart("Sidewalk_Left", Vector3.new(sW, curbH, length), CFrame.new(leftOffset, curbH / 2, 0), swColor, Enum.Material.Concrete)
-    makePart("Sidewalk_Right", Vector3.new(sW, curbH, length), CFrame.new(rightOffset, curbH / 2, 0), swColor, Enum.Material.Concrete)
+    makePart("Sidewalk_Left", Vector3.new(sW, curbH, length), CFrame.new(leftOffset, swCenterY, 0), swColor, Enum.Material.Concrete)
+    makePart("Sidewalk_Right", Vector3.new(sW, curbH, length), CFrame.new(rightOffset, swCenterY, 0), swColor, Enum.Material.Concrete)
 
     -- Bordillos de granito exteriores con resalte
     local curbLeftX = - (rW / 2) - (curbW / 2)
     local curbRightX = (rW / 2) + (curbW / 2)
-    makePart("Curb_Left", Vector3.new(curbW, curbH + 0.1, length), CFrame.new(curbLeftX, curbH / 2, 0), curbColor, Enum.Material.Granite)
-    makePart("Curb_Right", Vector3.new(curbW, curbH + 0.1, length), CFrame.new(curbRightX, curbH / 2, 0), curbColor, Enum.Material.Granite)
+    makePart("Curb_Left", Vector3.new(curbW, curbH + 0.1, length), CFrame.new(curbLeftX, swCenterY, 0), curbColor, Enum.Material.Granite)
+    makePart("Curb_Right", Vector3.new(curbW, curbH + 0.1, length), CFrame.new(curbRightX, swCenterY, 0), curbColor, Enum.Material.Granite)
 
     -- Rejillas de imbornal pluvial en la cuneta del bordillo
     local drainStep = 50
     local drainCount = math.max(1, math.floor(length / drainStep))
     for d = 1, drainCount do
         local drainZ = (-length / 2) + (d - 0.5) * (length / drainCount)
-        makePart("Storm_Drain_L_" .. d, Vector3.new(1.8, 0.1, 3.2), CFrame.new(-rW / 2 + 1.0, 0.02, drainZ), Color3.fromRGB(45, 48, 54), Enum.Material.DiamondPlate, false, true)
-        makePart("Storm_Drain_R_" .. d, Vector3.new(1.8, 0.1, 3.2), CFrame.new(rW / 2 - 1.0, 0.02, drainZ), Color3.fromRGB(45, 48, 54), Enum.Material.DiamondPlate, false, true)
+        makePart("Storm_Drain_L_" .. d, Vector3.new(1.8, 0.08, 3.2), CFrame.new(-rW / 2 + 1.0, roadSurfaceY + 0.04, drainZ), Color3.fromRGB(45, 48, 54), Enum.Material.DiamondPlate, false, true)
+        makePart("Storm_Drain_R_" .. d, Vector3.new(1.8, 0.08, 3.2), CFrame.new(rW / 2 - 1.0, roadSurfaceY + 0.04, drainZ), Color3.fromRGB(45, 48, 54), Enum.Material.DiamondPlate, false, true)
     end
     `
         : ""
     }
 
-    -- 3. Líneas Viales (Centro amarillo discontinuo + bordes blancos continuos)
+    -- 3. Líneas Viales (Pintura con relieve real de +0.06 studs sobre el asfalto para anular parpadeo)
     ${
       hasLanes
         ? `
@@ -132,21 +134,22 @@ local function buildStreet()
     local stripeGap = 6
     local totalStripeCycle = stripeLength + stripeGap
     local stripeCount = math.floor(length / totalStripeCycle)
+    local stripeY = roadSurfaceY + 0.04
 
     for i = 1, stripeCount do
         local offsetZ = (-length / 2) + ((i - 0.5) * totalStripeCycle)
-        makePart("Center_Stripe_" .. i, Vector3.new(0.7, 0.06, stripeLength), CFrame.new(0, 0.03, offsetZ), Color3.fromRGB(240, 200, 45), Enum.Material.SmoothPlastic, false, true)
+        makePart("Center_Stripe_" .. i, Vector3.new(0.7, 0.08, stripeLength), CFrame.new(0, stripeY, offsetZ), Color3.fromRGB(240, 200, 45), Enum.Material.SmoothPlastic, false, true)
     end
 
     -- Líneas blancas continuas laterales (delimitadoras de calzada)
     local edgeX = rW / 2 - 1.2
-    makePart("Edge_Stripe_Left", Vector3.new(0.6, 0.05, length), CFrame.new(-edgeX, 0.025, 0), Color3.fromRGB(245, 248, 252), Enum.Material.SmoothPlastic, false, true)
-    makePart("Edge_Stripe_Right", Vector3.new(0.6, 0.05, length), CFrame.new(edgeX, 0.025, 0), Color3.fromRGB(245, 248, 252), Enum.Material.SmoothPlastic, false, true)
+    makePart("Edge_Stripe_Left", Vector3.new(0.6, 0.08, length), CFrame.new(-edgeX, stripeY, 0), Color3.fromRGB(245, 248, 252), Enum.Material.SmoothPlastic, false, true)
+    makePart("Edge_Stripe_Right", Vector3.new(0.6, 0.08, length), CFrame.new(edgeX, stripeY, 0), Color3.fromRGB(245, 248, 252), Enum.Material.SmoothPlastic, false, true)
 
     -- Tapas de registro de alcantarillado circulares
     if length >= 40 then
-        local mhCF1 = CFrame.new(-4, 0.04, -length / 4) * CFrame.Angles(0, 0, math.rad(90))
-        local mhCF2 = CFrame.new(4, 0.04, length / 4) * CFrame.Angles(0, 0, math.rad(90))
+        local mhCF1 = CFrame.new(-4, roadSurfaceY + 0.04, -length / 4) * CFrame.Angles(0, 0, math.rad(90))
+        local mhCF2 = CFrame.new(4, roadSurfaceY + 0.04, length / 4) * CFrame.Angles(0, 0, math.rad(90))
         makeCylinder("Manhole_A", Vector3.new(3.0, 0.08, 3.0), mhCF1, Color3.fromRGB(50, 54, 60), Enum.Material.DiamondPlate)
         makeCylinder("Manhole_B", Vector3.new(3.0, 0.08, 3.0), mhCF2, Color3.fromRGB(50, 54, 60), Enum.Material.DiamondPlate)
     end

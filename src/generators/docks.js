@@ -28,6 +28,7 @@ export function generateDocksLuau({
   rotationY = 0,
   waterLevel = -3,
   containerCount = 20,
+  containerStacks = 20,
   includeWarehouse = true,
   seed = 4040,
   parent = "City/Docks",
@@ -36,7 +37,8 @@ export function generateDocksLuau({
   const [dockW, dockD] = [Math.max(80, snapVal(size[0], 4)), Math.max(60, snapVal(size[1] || size[2] || 110, 4))];
   const rotY = typeof rotationY === "number" ? rotationY : 0;
   const effectiveSeed = typeof seed === "number" ? seed : 4040;
-  const cCount = Math.max(6, Math.min(60, containerCount));
+  const effectiveContainerCount = typeof containerCount === "number" && containerCount !== 20 ? containerCount : (typeof containerStacks === "number" ? containerStacks : 20);
+  const cCount = Math.max(6, Math.min(60, effectiveContainerCount));
 
   return `
 local CollectionService = game:GetService("CollectionService")
@@ -65,6 +67,7 @@ local function buildDocks()
     local dockD = ${dockD}
     local waterY = ${waterLevel}
     local seedVal = ${effectiveSeed}
+    local containerLimit = ${cCount}
 
     local function makePart(pName, sz, relCF, col, mat, canCol, isDecor)
         local p = Instance.new("Part", model)
@@ -118,7 +121,7 @@ local function buildDocks()
         makePart("Mooring_Bollard_Cap", Vector3.new(2.4, 0.5, 2.4), CFrame.new(bx, pierTopY + 2.4, dockD / 2 - 3), Color3.fromRGB(215, 175, 45), Enum.Material.Metal, false, true)
     end
 
-    -- 2. CONTENEDORES MARÍTIMOS 3D DE CARGA (20ft y 40ft)
+    -- 2. CONTENEDORES MARÍTIMOS 3D DE CARGA (20ft y 40ft) CON ESTRUCTURA MODULAR SIN Z-FIGHTING
     local colors = {
       ${CONTAINER_COLORS.map((c) => `Color3.fromRGB(${c[0]}, ${c[1]}, ${c[2]})`).join(",\n      ")}
     }
@@ -128,43 +131,73 @@ local function buildDocks()
         local cCol = colors[(colIdx % #colors) + 1]
         local cf = CFrame.new(relPos.X, relPos.Y + cH / 2, relPos.Z) * CFrame.Angles(0, math.rad(rotDeg), 0)
 
-        -- Cuerpo del contenedor con textura metálica corrugada
-        local body = makePart("Container_" .. id, Vector3.new(cW, cH, cL), cf, cCol, Enum.Material.DiamondPlate, true)
+        -- Cuerpo corrugado principal (dimensionado interiormente para no solapar con los postes de esquina)
+        local body = makePart("Container_" .. id, Vector3.new(cW - 0.4, cH - 0.4, cL - 0.6), cf, cCol, Enum.Material.DiamondPlate, true)
         body:SetAttribute("IsContainer", true)
 
-        -- Cantoneras estructurales de esquina (Corner castings)
-        local cornerCol = Color3.fromRGB(40, 44, 50)
-        local frameThick = 0.5
-        makePart("C_Frame_F", Vector3.new(cW + 0.1, cH + 0.1, frameThick), cf * CFrame.new(0, 0, cL / 2 - frameThick / 2), cornerCol, Enum.Material.Metal, true)
-        makePart("C_Frame_B", Vector3.new(cW + 0.1, cH + 0.1, frameThick), cf * CFrame.new(0, 0, -cL / 2 + frameThick / 2), cornerCol, Enum.Material.Metal, true)
+        -- Estructura de esquinas y vigas perimetrales de acero oscuro (Corner Castings & Pillars)
+        local frameCol = Color3.fromRGB(38, 42, 48)
+        local postW = 0.8
+        local halfInnerW = (cW - postW) / 2
+        local halfInnerL = (cL - postW) / 2
 
-        -- Puertas de doble batiente en extremo frontal con barras verticales de cerrojo
-        local doorZ = cL / 2 + 0.05
-        makePart("C_Lock_Rod_1", Vector3.new(0.2, cH - 1.2, 0.2), cf * CFrame.new(-1.8, 0, doorZ), Color3.fromRGB(220, 222, 228), Enum.Material.Metal, false, true)
-        makePart("C_Lock_Rod_2", Vector3.new(0.2, cH - 1.2, 0.2), cf * CFrame.new(1.8, 0, doorZ), Color3.fromRGB(220, 222, 228), Enum.Material.Metal, false, true)
+        -- 4 Postes verticales esquineros
+        makePart("C_Post_1", Vector3.new(postW, cH, postW), cf * CFrame.new(-halfInnerW, 0, -halfInnerL), frameCol, Enum.Material.Metal, true)
+        makePart("C_Post_2", Vector3.new(postW, cH, postW), cf * CFrame.new(halfInnerW, 0, -halfInnerL), frameCol, Enum.Material.Metal, true)
+        makePart("C_Post_3", Vector3.new(postW, cH, postW), cf * CFrame.new(-halfInnerW, 0, halfInnerL), frameCol, Enum.Material.Metal, true)
+        makePart("C_Post_4", Vector3.new(postW, cH, postW), cf * CFrame.new(halfInnerW, 0, halfInnerL), frameCol, Enum.Material.Metal, true)
 
-        -- Rótulo o código identificador en el lateral
-        local tagPl = makePart("C_Code_Plate", Vector3.new(cW + 0.1, 1.4, 4.0), cf * CFrame.new(0, cH / 2 - 1.5, 0), Color3.fromRGB(240, 242, 245), Enum.Material.SmoothPlastic, false, true)
+        -- Vigas longitudinales superiores e inferiores
+        makePart("C_Rail_Top_L", Vector3.new(postW, 0.5, cL), cf * CFrame.new(-halfInnerW, cH / 2 - 0.25, 0), frameCol, Enum.Material.Metal, false, true)
+        makePart("C_Rail_Top_R", Vector3.new(postW, 0.5, cL), cf * CFrame.new(halfInnerW, cH / 2 - 0.25, 0), frameCol, Enum.Material.Metal, false, true)
+        makePart("C_Rail_Bot_L", Vector3.new(postW, 0.5, cL), cf * CFrame.new(-halfInnerW, -cH / 2 + 0.25, 0), frameCol, Enum.Material.Metal, false, true)
+        makePart("C_Rail_Bot_R", Vector3.new(postW, 0.5, cL), cf * CFrame.new(halfInnerW, -cH / 2 + 0.25, 0), frameCol, Enum.Material.Metal, false, true)
+
+        -- Puertas de doble batiente en extremo frontal (+Z)
+        local doorZ = cL / 2 - 0.15
+        makePart("C_Door_Face", Vector3.new(cW - 1.2, cH - 1.0, 0.2), cf * CFrame.new(0, 0, doorZ), cCol, Enum.Material.Metal, false, true)
+
+        -- Barras verticales cilíndricas de cerrojo (Lock Rods) con holgura hacia afuera
+        local rodZ = cL / 2 + 0.12
+        makePart("C_Lock_Rod_1", Vector3.new(0.25, cH - 1.4, 0.25), cf * CFrame.new(-1.6, 0, rodZ), Color3.fromRGB(220, 222, 228), Enum.Material.Metal, false, true)
+        makePart("C_Lock_Rod_2", Vector3.new(0.25, cH - 1.4, 0.25), cf * CFrame.new(1.6, 0, rodZ), Color3.fromRGB(220, 222, 228), Enum.Material.Metal, false, true)
+
+        -- Rótulo con código en el lateral exterior
+        local plateCF = cf * CFrame.new(cW / 2 + 0.05, cH / 2 - 1.6, 0)
+        makePart("C_Code_Plate", Vector3.new(0.1, 1.4, 4.0), plateCF, Color3.fromRGB(240, 242, 245), Enum.Material.SmoothPlastic, false, true)
     end
 
-    -- Generar laberinto de pilas de contenedores en la explanada
-    local containerCount = ${cCount}
-    local startX = -dockW / 2 + 18
-    local startZ = dockD / 2 - 28
-    local slot = 0
+    -- GENERACIÓN DE PILAS DE CONTENEDORES EN RETÍCULA ORDENADA (Bay Grid - Sin colisiones)
+    -- Los muelles reales organizan los contenedores en calles paralelas separadas para carretillas y camiones
+    local cW, cL_40, cL_20 = 8.5, 36.0, 20.0
+    local bayWidth = 12.0  -- 8.5 studs de contenedor + 3.5 studs de pasillo entre columnas
+    local bayLength = 46.0 -- 36 studs de contenedor + 10 studs de calle entre hileras
 
-    for i = 1, containerCount do
-        slot = slot + 1
-        local is40ft = (i % 3 ~= 0)
-        local cLen = is40ft and 36 or 20
-        local colX = startX + ((slot * 11) % (dockW - 36))
-        local rowZ = startZ - math.floor((slot * 14) % (dockD - 48))
-        local stackHeight = ((i * 7) % 3) -- 0 = suelo, 1 = piso 2, 2 = piso 3
+    local yardStartX = -dockW / 2 + 20
+    local yardEndX = dockW / 2 - (includeWarehouse and (whW + 24) or 20)
+    local yardStartZ = dockD / 2 - 28
+    local yardEndZ = -dockD / 2 + 30
 
-        for s = 0, stackHeight do
-            local cY = pierTopY + (s * 9.0)
-            local rot = (i % 2 == 0) and 0 or 90
-            spawnContainer(i .. "_L" .. s, cLen, Vector3.new(colX, cY, rowZ), rot, i + s * 3)
+    local numCols = math.max(1, math.floor((yardEndX - yardStartX) / bayWidth))
+    local numRows = math.max(1, math.floor((yardStartZ - yardEndZ) / bayLength))
+
+    local stackIdx = 0
+    for row = 1, numRows do
+        local rowCenterZ = yardStartZ - (row - 0.5) * bayLength
+        for col = 1, numCols do
+            stackIdx = stackIdx + 1
+            if stackIdx <= containerLimit then
+                local colCenterX = yardStartX + (col - 0.5) * bayWidth
+                local is40ft = (stackIdx % 3 ~= 0)
+                local cLen = is40ft and cL_40 or cL_20
+                -- Altura de apilado escalonada (1 a 3 alturas)
+                local stackH = (stackIdx % 3) + 1
+
+                for s = 1, stackH do
+                    local cY = pierTopY + (s - 1) * 9.05 -- 0.05 de holgura vertical para anular z-fighting entre techos y bases
+                    spawnContainer(stackIdx .. "_L" .. s, cLen, Vector3.new(colCenterX, cY, rowCenterZ), 0, stackIdx * 3 + s)
+                end
+            end
         end
     end
 
@@ -184,8 +217,8 @@ local function buildDocks()
     -- Tejado a dos aguas del almacén
     local whRoofH = 6.5
     local halfWhW = (whW + 1.6) / 2
-    local whRoofCF_L = CFrame.new(whX - halfWhW / 2, pierTopY + whH + whRoofH / 2, whZ) * CFrame.Angles(0, math.rad(-90), 0)
-    local whRoofCF_R = CFrame.new(whX + halfWhW / 2, pierTopY + whH + whRoofH / 2, whZ) * CFrame.Angles(0, math.rad(90), 0)
+    local whRoofCF_L = CFrame.new(whX - halfWhW / 2, pierTopY + whH + whRoofH / 2, whZ) * CFrame.Angles(0, math.rad(90), 0)
+    local whRoofCF_R = CFrame.new(whX + halfWhW / 2, pierTopY + whH + whRoofH / 2, whZ) * CFrame.Angles(0, math.rad(-90), 0)
     
     local wWedgeL = Instance.new("WedgePart", model)
     wWedgeL.Name = "Warehouse_Roof_L"
@@ -248,7 +281,7 @@ local function buildDocks()
         end
     end
 
-    print(string.format("[DocksEngine] ✅ Muelles industriales '%s' (%dx%d studs, %d contenedores) construidos en '%s'.", "${name}", dockW, dockD, containerCount, "${parent}"))
+    print(string.format("[DocksEngine] ✅ Muelles industriales '%s' (%dx%d studs, %d contenedores) construidos en '%s'.", "${name}", dockW, dockD, containerLimit, "${parent}"))
 end
 
 buildDocks()

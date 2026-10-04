@@ -57,11 +57,11 @@ cityFolder = Instance.new("Folder")
 cityFolder.Name = "City_HylandPoint"
 cityFolder.Parent = workspace
 
--- Terreno base asfaltado/hormigonado
+-- Terreno base asfaltado/hormigonado (Cota superior en Y = -0.5 para no colisionar con la cota +0.3 de las carreteras)
 local base = Instance.new("Part", cityFolder)
 base.Name = "Ground_Main"
 base.Size = Vector3.new(700, 4, 700)
-base.CFrame = CFrame.new(0, -2, 0)
+base.CFrame = CFrame.new(0, -2.5, 0)
 base.Anchored = true
 base.Material = Enum.Material.Concrete
 base.Color = Color3.fromRGB(120, 122, 125)

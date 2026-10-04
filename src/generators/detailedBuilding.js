@@ -242,34 +242,39 @@ local function buildArchitecturalBuilding()
     local leafH = 7.5
     local doorSurfaceZ = frontZ - alcoveDepth + 0.2
 
-    -- Puerta Izquierda
-    local doorL = makePart("Door_Leaf_L", Vector3.new(leafW, leafH, 0.4),
+    -- Puerta Izquierda: Marco, respaldo opaco y cristal en capas estrictas
+    makePart("Door_Frame_L", Vector3.new(leafW, leafH, 0.2),
         CFrame.new(cx - leafW / 2 - 0.15, cy + leafH / 2 + 0.3, doorSurfaceZ), colDoor, matDoor, true)
-    -- Cristal insertado en puerta izquierda
-    local glassL = makePart("Door_Glass_L", Vector3.new(leafW - 0.8, leafH - 1.2, 0.2),
-        CFrame.new(cx - leafW / 2 - 0.15, cy + leafH / 2 + 0.3, doorSurfaceZ), colGlass, matGlass, false, true)
+    makePart("Door_Backing_L", Vector3.new(leafW - 0.8, leafH - 1.2, 0.04),
+        CFrame.new(cx - leafW / 2 - 0.15, cy + leafH / 2 + 0.3, doorSurfaceZ + 0.04), Color3.fromRGB(20, 22, 26), Enum.Material.SmoothPlastic, false, true)
+    local glassL = makePart("Door_Glass_L", Vector3.new(leafW - 0.8, leafH - 1.2, 0.05),
+        CFrame.new(cx - leafW / 2 - 0.15, cy + leafH / 2 + 0.3, doorSurfaceZ + 0.10), colGlass, matGlass, false, true)
     glassL.Transparency = 0.35
     glassL.Reflectance = 0.4
 
     -- Puerta Derecha
-    local doorR = makePart("Door_Leaf_R", Vector3.new(leafW, leafH, 0.4),
+    makePart("Door_Frame_R", Vector3.new(leafW, leafH, 0.2),
         CFrame.new(cx + leafW / 2 + 0.15, cy + leafH / 2 + 0.3, doorSurfaceZ), colDoor, matDoor, true)
-    local glassR = makePart("Door_Glass_R", Vector3.new(leafW - 0.8, leafH - 1.2, 0.2),
-        CFrame.new(cx + leafW / 2 + 0.15, cy + leafH / 2 + 0.3, doorSurfaceZ), colGlass, matGlass, false, true)
+    makePart("Door_Backing_R", Vector3.new(leafW - 0.8, leafH - 1.2, 0.04),
+        CFrame.new(cx + leafW / 2 + 0.15, cy + leafH / 2 + 0.3, doorSurfaceZ + 0.04), Color3.fromRGB(20, 22, 26), Enum.Material.SmoothPlastic, false, true)
+    local glassR = makePart("Door_Glass_R", Vector3.new(leafW - 0.8, leafH - 1.2, 0.05),
+        CFrame.new(cx + leafW / 2 + 0.15, cy + leafH / 2 + 0.3, doorSurfaceZ + 0.10), colGlass, matGlass, false, true)
     glassR.Transparency = 0.35
     glassR.Reflectance = 0.4
 
     -- Manillones cilíndricos verticales de diseño arquitectónico
     local handleH = 2.4
-    local handleCF_L = CFrame.new(cx - 0.6, cy + 3.8, doorSurfaceZ + 0.3) * CFrame.Angles(0, 0, math.rad(90))
-    local handleCF_R = CFrame.new(cx + 0.6, cy + 3.8, doorSurfaceZ + 0.3) * CFrame.Angles(0, 0, math.rad(90))
+    local handleCF_L = CFrame.new(cx - 0.6, cy + 3.8, doorSurfaceZ + 0.22) * CFrame.Angles(0, 0, math.rad(90))
+    local handleCF_R = CFrame.new(cx + 0.6, cy + 3.8, doorSurfaceZ + 0.22) * CFrame.Angles(0, 0, math.rad(90))
     makeCylinder("Door_Handle_L", Vector3.new(0.25, handleH, 0.25), handleCF_L, colHandle, Enum.Material.Metal, false)
     makeCylinder("Door_Handle_R", Vector3.new(0.25, handleH, 0.25), handleCF_R, colHandle, Enum.Material.Metal, false)
 
     -- Ventanal superior del portal (Transom window / Tarja de cristal)
     local transomH = doorH - leafH - 0.5
-    local transomPart = makePart("Door_Transom", Vector3.new(doorW - 0.4, transomH, 0.3),
-        CFrame.new(cx, cy + leafH + transomH / 2 + 0.4, doorSurfaceZ), colGlass, matGlass, false, true)
+    makePart("Door_Transom_Backing", Vector3.new(doorW - 0.4, transomH, 0.04),
+        CFrame.new(cx, cy + leafH + transomH / 2 + 0.4, doorSurfaceZ + 0.04), Color3.fromRGB(20, 22, 26), Enum.Material.SmoothPlastic, false, true)
+    local transomPart = makePart("Door_Transom", Vector3.new(doorW - 0.4, transomH, 0.06),
+        CFrame.new(cx, cy + leafH + transomH / 2 + 0.4, doorSurfaceZ + 0.10), colGlass, matGlass, false, true)
     transomPart.Transparency = 0.35
     transomPart.Reflectance = 0.45
 
@@ -304,21 +309,25 @@ local function buildArchitecturalBuilding()
 
         -- Escaparate Izquierdo con zócalo bajo (knee-wall)
         makePart("Shop_Kneewall_L", Vector3.new(availSideW, 1.4, 0.6), CFrame.new(leftShopX, cy + 0.7, frontZ), colBase, matBase, true)
-        local glassShopL = makePart("Showcase_Glass_L", Vector3.new(availSideW, shopH - 1.4, 0.4),
-            CFrame.new(leftShopX, shopY + 0.7, frontZ), colGlass, matGlass, false, true)
+        makePart("Showcase_Backing_L", Vector3.new(availSideW, shopH - 1.4, 0.05),
+            CFrame.new(leftShopX, shopY + 0.7, frontZ + 0.03), Color3.fromRGB(22, 25, 30), Enum.Material.SmoothPlastic, false, true)
+        local glassShopL = makePart("Showcase_Glass_L", Vector3.new(availSideW, shopH - 1.4, 0.08),
+            CFrame.new(leftShopX, shopY + 0.7, frontZ + 0.12), colGlass, matGlass, false, true)
         glassShopL.Transparency = 0.30
         glassShopL.Reflectance = 0.50
 
         -- Escaparate Derecho con zócalo bajo
         makePart("Shop_Kneewall_R", Vector3.new(availSideW, 1.4, 0.6), CFrame.new(rightShopX, cy + 0.7, frontZ), colBase, matBase, true)
-        local glassShopR = makePart("Showcase_Glass_R", Vector3.new(availSideW, shopH - 1.4, 0.4),
-            CFrame.new(rightShopX, shopY + 0.7, frontZ), colGlass, matGlass, false, true)
+        makePart("Showcase_Backing_R", Vector3.new(availSideW, shopH - 1.4, 0.05),
+            CFrame.new(rightShopX, shopY + 0.7, frontZ + 0.03), Color3.fromRGB(22, 25, 30), Enum.Material.SmoothPlastic, false, true)
+        local glassShopR = makePart("Showcase_Glass_R", Vector3.new(availSideW, shopH - 1.4, 0.08),
+            CFrame.new(rightShopX, shopY + 0.7, frontZ + 0.12), colGlass, matGlass, false, true)
         glassShopR.Transparency = 0.30
         glassShopR.Reflectance = 0.50
 
         -- Parteluces (mullions metálicos) que enmarcan los escaparates
-        makePart("Mullion_Shop_L", Vector3.new(0.3, shopH - 1.4, 0.5), CFrame.new(leftShopX, shopY + 0.7, frontZ + 0.1), colPillar, matPillar, false, true)
-        makePart("Mullion_Shop_R", Vector3.new(0.3, shopH - 1.4, 0.5), CFrame.new(rightShopX, shopY + 0.7, frontZ + 0.1), colPillar, matPillar, false, true)
+        makePart("Mullion_Shop_L", Vector3.new(0.3, shopH - 1.4, 0.3), CFrame.new(leftShopX, shopY + 0.7, frontZ + 0.20), colPillar, matPillar, false, true)
+        makePart("Mullion_Shop_R", Vector3.new(0.3, shopH - 1.4, 0.3), CFrame.new(rightShopX, shopY + 0.7, frontZ + 0.20), colPillar, matPillar, false, true)
 
         -- Toldos a 45° con textura sobre los escaparates
         local awnDepth = 3.6
@@ -416,21 +425,25 @@ local function buildArchitecturalBuilding()
         local lintelCF = baseCF * CFrame.new(0, winH / 2 + 0.3, lintelProtrude / 2)
         makePart(namePrefix .. "_Lintel", Vector3.new(winW + 0.8, 0.6, lintelProtrude), lintelCF, colCornice, matCornice, false, true)
 
-        -- 3. Marco perimetral
-        local frameCF = baseCF * CFrame.new(0, 0, 0.1)
-        makePart(namePrefix .. "_Frame", Vector3.new(winW, winH, 0.3), frameCF, colPillar, matPillar, false, true)
+        -- 3. Respaldo opaco antirreflectante / antisolape contra la fachada
+        local backingCF = baseCF * CFrame.new(0, 0, 0.02)
+        makePart(namePrefix .. "_Backing", Vector3.new(winW - 0.2, winH - 0.2, 0.04), backingCF, Color3.fromRGB(22, 24, 28), Enum.Material.SmoothPlastic, false, true)
 
-        -- 4. Parteluz vertical central (mullion) y travesaño horizontal (transom)
-        local mullionCF = baseCF * CFrame.new(0, 0, 0.16)
-        makePart(namePrefix .. "_Mullion", Vector3.new(0.25, winH - 0.4, 0.2), mullionCF, colPillar, matPillar, false, true)
-        local transomCF = baseCF * CFrame.new(0, winH * 0.25, 0.16)
-        makePart(namePrefix .. "_Transom", Vector3.new(winW - 0.4, 0.25, 0.2), transomCF, colPillar, matPillar, false, true)
+        -- 4. Marco perimetral
+        local frameCF = baseCF * CFrame.new(0, 0, 0.08)
+        makePart(namePrefix .. "_Frame", Vector3.new(winW, winH, 0.16), frameCF, colPillar, matPillar, false, true)
 
-        -- 5. Panel de cristal con iluminación interior procedural variada
-        local glassCF = baseCF * CFrame.new(0, 0, -0.05)
-        local glassP = makePart(namePrefix .. "_Glass", Vector3.new(winW - 0.5, winH - 0.5, 0.2), glassCF, colGlass, matGlass, false, true)
+        -- 5. Panel de cristal desfasado hacia adelante sin coplanaridad
+        local glassCF = baseCF * CFrame.new(0, 0, 0.12)
+        local glassP = makePart(namePrefix .. "_Glass", Vector3.new(winW - 0.5, winH - 0.5, 0.04), glassCF, colGlass, matGlass, false, true)
         glassP.Transparency = 0.32
         glassP.Reflectance = 0.45
+
+        -- 6. Parteluz vertical central (mullion) y travesaño horizontal (transom)
+        local mullionCF = baseCF * CFrame.new(0, 0, 0.18)
+        makePart(namePrefix .. "_Mullion", Vector3.new(0.25, winH - 0.4, 0.10), mullionCF, colPillar, matPillar, false, true)
+        local transomCF = baseCF * CFrame.new(0, winH * 0.25, 0.18)
+        makePart(namePrefix .. "_Transom", Vector3.new(winW - 0.4, 0.25, 0.10), transomCF, colPillar, matPillar, false, true)
 
         -- Iluminación dinámica realista
         local hash = (cfCenter.X * 17 + cfCenter.Y * 31 + cfCenter.Z * 43) % 100
@@ -481,31 +494,38 @@ local function buildArchitecturalBuilding()
         local flBaseY = cy + groundH + (fl - 1) * upperH
         local flCenterY = flBaseY + upperH / 2
 
+        local curHalfW = halfW
+        local curHalfD = halfD
+        if hasSetback and fl >= setbackFloor then
+            curHalfW = halfW - setbackInset
+            curHalfD = halfD - setbackInset
+        end
+
         -- Cornisa horizontal perimetral continua entre pisos
-        makePart("Cornice_Belt_Fl_" .. fl, Vector3.new(w + 1.2, 0.7, d + 1.2),
+        makePart("Cornice_Belt_Fl_" .. fl, Vector3.new(curHalfW * 2 + 1.2, 0.7, curHalfD * 2 + 1.2),
             CFrame.new(cx, flBaseY + upperH, cz), colCornice, matCornice, false, true)
 
         local hasBalconyThisFloor = ${enableBalconies ? "true" : "false"} and (fl % 2 == 1) and (fl < numFloors - 1)
 
         -- 8A. FACHADA FRONTAL SUR (+Z)
-        local numWinX = math.max(2, math.floor((w - 8) / 8))
-        local stepX = (w - 6) / numWinX
+        local numWinX = math.max(2, math.floor((curHalfW * 2 - 8) / 8))
+        local stepX = (curHalfW * 2 - 6) / numWinX
         for wx = 1, numWinX do
-            local winPosX = cx - halfW + 3 + (wx - 0.5) * stepX
+            local winPosX = cx - curHalfW + 3 + (wx - 0.5) * stepX
             local isBalc = hasBalconyThisFloor and (wx == 1 or wx == numWinX)
             spawnWindowModule("Win_Front_" .. fl .. "_" .. wx,
-                CFrame.new(winPosX, flCenterY, cz + halfD), 0, isBalc)
+                CFrame.new(winPosX, flCenterY, cz + curHalfD), 0, isBalc)
         end
 
         -- 8B. FACHADA TRASERA NORTE (-Z)
         for wx = 1, numWinX do
-            local winPosX = cx - halfW + 3 + (wx - 0.5) * stepX
+            local winPosX = cx - curHalfW + 3 + (wx - 0.5) * stepX
             spawnWindowModule("Win_Back_" .. fl .. "_" .. wx,
-                CFrame.new(winPosX, flCenterY, cz - halfD), math.rad(180), false)
+                CFrame.new(winPosX, flCenterY, cz - curHalfD), math.rad(180), false)
 
             -- Compresores de A/C exteriores bajo ventanas en la fachada trasera
             if (fl + wx) % 2 == 0 then
-                local acCF = CFrame.new(winPosX + 1.0, flCenterY - winH / 2 - 1.2, cz - halfD - 1.2)
+                local acCF = CFrame.new(winPosX + 1.0, flCenterY - winH / 2 - 1.2, cz - curHalfD - 1.2)
                 makePart("AC_Unit_" .. fl .. "_" .. wx, Vector3.new(2.4, 1.8, 1.6), acCF, Color3.fromRGB(180, 185, 190), Enum.Material.Metal, false, true)
                 -- Rejilla del ventilador
                 local fanCyl = makeCylinder("AC_Fan_" .. fl .. "_" .. wx, Vector3.new(1.2, 0.2, 1.2), acCF * CFrame.new(0, 0, -0.85) * CFrame.Angles(0, 0, math.rad(90)), Color3.fromRGB(40, 44, 50), Enum.Material.Metal, false)
@@ -513,19 +533,19 @@ local function buildArchitecturalBuilding()
         end
 
         -- 8C. FACHADA OESTE (-X)
-        local numWinZ = math.max(2, math.floor((d - 8) / 8))
-        local stepZ = (d - 6) / numWinZ
+        local numWinZ = math.max(2, math.floor((curHalfD * 2 - 8) / 8))
+        local stepZ = (curHalfD * 2 - 6) / numWinZ
         for wz = 1, numWinZ do
-            local winPosZ = cz - halfD + 3 + (wz - 0.5) * stepZ
+            local winPosZ = cz - curHalfD + 3 + (wz - 0.5) * stepZ
             spawnWindowModule("Win_West_" .. fl .. "_" .. wz,
-                CFrame.new(cx - halfW, flCenterY, winPosZ), math.rad(-90), false)
+                CFrame.new(cx - curHalfW, flCenterY, winPosZ), math.rad(-90), false)
         end
 
         -- 8D. FACHADA ESTE (+X)
         for wz = 1, numWinZ do
-            local winPosZ = cz - halfD + 3 + (wz - 0.5) * stepZ
+            local winPosZ = cz - curHalfD + 3 + (wz - 0.5) * stepZ
             spawnWindowModule("Win_East_" .. fl .. "_" .. wz,
-                CFrame.new(cx + halfW, flCenterY, winPosZ), math.rad(90), false)
+                CFrame.new(cx + curHalfW, flCenterY, winPosZ), math.rad(90), false)
         end
 
         ${
