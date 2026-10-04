@@ -1,109 +1,111 @@
-# Roblox Studio Graybox MCP con OpenCode
+# Roblox Studio City & Graybox MCP (para OpenCode)
 
-Servidor Model Context Protocol (MCP) especializado en **Level Design** y **Grayboxing (Blockout)** para **Roblox Studio**, diseñado para conectarse directamente con **OpenCode**.
+Servidor Model Context Protocol (MCP) de nivel profesional para **Level Design**, **Prototipado de Ciudades a Gran Escala** y **Grayboxing** en **Roblox Studio**, integrado directamente con **OpenCode**.
 
-Permite que una IA en OpenCode genere habitaciones, vanos de puertas, escaleras con peldaños transitables, coberturas tácticas y arenas completas en tiempo real directamente en tu sesión de Roblox Studio, con **soporte nativo de Deshacer/Rehacer (`Ctrl + Z`)**.
+Diseñado para mapas masivos (ciudades, distritos, favelas, autopistas y sistemas de territorios de pandillas) con **Batching de alto rendimiento**, **geometría avanzada (Cuñas y Truss)**, **ajuste a rejilla (Snap to Grid)**, **tags de juego (CollectionService)** y **capacidad de lectura en vivo (Feedback Loop)**, todo con soporte nativo de **Deshacer/Rehacer (`Ctrl + Z`)**.
 
 ---
 
-## 1. Arquitectura de la Solución
+## 1. Arquitectura del Sistema
 
 ```text
- ┌──────────────┐         stdio          ┌────────────────────────┐
- │   OpenCode   │ ◄────────────────────► │  Servidor MCP Graybox  │
- └──────────────┘                        │  (Node.js / Express)   │
-                                         └───────────┬────────────┘
-                                                     │ Local HTTP
-                                                     │ (127.0.0.1:30250)
-                                                     ▼
-                                         ┌────────────────────────┐
-                                         │  Roblox Studio Plugin  │
-                                         │  (ChangeHistoryService)│
-                                         └───────────┬────────────┘
-                                                     │ Instanciación directa
-                                                     ▼
-                                         ┌────────────────────────┐
-                                         │   Workspace.Graybox    │
-                                         │   (Soporta Ctrl + Z)   │
-                                         └────────────────────────┘
+ ┌──────────────┐         stdio          ┌────────────────────────────────────────┐
+ │   OpenCode   │ ◄────────────────────► │          Servidor MCP Graybox          │
+ │ (AI Client)  │                        │          (Node.js / Express)           │
+ └──────────────┘                        └───────────────────┬────────────────────┘
+                                                             │ Local HTTP (Port 30250)
+                                                             │ • POST /poll (Batch Luau)
+                                                             │ • POST /response (Feedback Loop)
+                                                             ▼
+                                         ┌────────────────────────────────────────┐
+                                         │         Roblox Studio Plugin           │
+                                         │         (ChangeHistoryService)         │
+                                         └───────────────────┬────────────────────┘
+                                                             │
+                                     ┌───────────────────────┴───────────────────────┐
+                                     ▼                                               ▼
+                         ┌───────────────────────┐                       ┌───────────────────────┐
+                         │   Workspace.City      │                       │     Feedback Loop     │
+                         │ (Jerarquías / Tags)   │                       │ (get_workspace_layout)│
+                         └───────────────────────┘                       └───────────────────────┘
 ```
-
-### ¿Cómo interactúan los componentes?
-1. **OpenCode (Cliente MCP):** Se comunica con el servidor MCP mediante el estándar `stdio`.
-2. **Servidor MCP (`roblox-graybox-mcp`):** Contiene los generadores algorítmicos calibrados con las métricas oficiales de Roblox. Convierte los parámetros en Luau optimizado y los pone en cola en un servidor HTTP local en `127.0.0.1:30250`.
-3. **Plugin de Roblox Studio (`GrayboxBridge`):** Un script de plugin que hace polling continuo. Cuando recibe una instrucción, la ejecuta en Studio encapsulada dentro de **`ChangeHistoryService`**, lo que permite presionar **`Ctrl + Z`** para revertir cualquier cambio.
 
 ---
 
-## 2. Métricas Críticas de Graybox para Roblox
+## 2. Los 6 Pilares de Diseño para Grandes Ciudades
 
-Para que el modelo de IA genere niveles jugables, el MCP respeta la física y proporciones estándar del avatar de Roblox:
+### 1. Sistema de Batching (Loteo Masivo)
+Enviar una petición HTTP por cada ladrillo congela Roblox Studio. Nuestro MCP utiliza `build_structure(parts_list)`, permitiendo que la IA envíe **50, 100 o 300 partes en un solo mensaje JSON**, y el plugin de Roblox las instancia en memoria de golpe en menos de 50 milisegundos.
 
-| Elemento | Dimensión en Studs | Justificación Mecánica |
+### 2. Geometría Crítica para Ciudades
+No solo cubos. Incluye generadores para:
+- **`spawn_wedge` (Cuñas / WedgePart):** Indispensables para rampas de autopistas, calles empinadas de montaña y tejados de favela.
+- **`spawn_truss` (Escaleras técnicas / TrussPart):** Escaleras de cuadrícula escalables por el avatar de Roblox, ideales para callejones estrechos, andamios y salidas de emergencia.
+- **`set_hollow_box`:** Crea edificios o habitaciones huecas completas (4 paredes con vanos de puerta, suelo y techo) en una sola llamada para diseñar Bancos, Comisarías o Talleres sin escribir cada pared a mano.
+
+### 3. Organización por Jerarquías (Folders y Distritos)
+Evita que miles de partes inunden la raíz del Workspace. Cada herramienta incluye el parámetro `parent` (ejemplo: `parent = "City/Downtown/District_A/Bank"` o `parent = "Favela/Territory_B"`). El plugin crea automáticamente las subcarpetas necesarias. Esto permite pintar o modificar barrios enteros cuando una pandilla los captura.
+
+### 4. Atributos de Juego y Etiquetas (CollectionService)
+Permite asignar Tags de CollectionService y atributos de juego (`SetAttribute`) directamente desde OpenCode:
+- **Tags soportados:** `"Spawn_Coche"`, `"Zona_Captura"`, `"Heist_Target"`, `"No_Escalable"`, `"Cover_Low"`.
+- **Atributos de juego:** `Territory: "Ballas"`, `Health: 1000`, `Robbable: true`.
+
+### 5. Snap to Grid (Ajuste a Rejilla)
+Para que las avenidas, aceras y manzanas encajen con precisión milimétrica sin huecos donde los autos o jugadores se atasquen, el MCP fuerza o ajusta las coordenadas X y Z a múltiplos de **4 u 8 studs** (el estándar de construcción modular de Roblox).
+
+### 6. Capacidad de Lectura en Vivo (Feedback Loop)
+Mediante la herramienta `get_workspace_layout()`, OpenCode puede inspeccionar lo que ya está construido en Roblox Studio (posiciones, bounding boxes y tags). Así la IA sabe exactamente dónde está tu base o tus calles y no construye edificios encima de lo que ya modelaste.
+
+---
+
+## 3. Métricas Críticas en Studs (Avatar Roblox R15)
+
+| Elemento | Dimensión | Justificación |
 | :--- | :--- | :--- |
-| **Altura Avatar (R15)** | `5 studs` (ancho: `4 studs`, prof: `2 studs`) | Caja de colisión del jugador |
-| **Salto Estándar** | `7.2 studs` de alto | Máximo alcance vertical sin escalar |
-| **Paso de Escalón (Max)** | `1.2 studs` de alto | Altura máxima que el avatar sube caminando sin saltar |
-| **Escalones Ideales** | Alto: `0.8 studs`, Huella: `2.0 studs` | Subida fluida a velocidad normal |
-| **Puertas** | Mínimo `4 x 8 studs` (Ideal: `5 x 8.5 studs`) | Evita atorarse con accesorios y sombreros |
-| **Pasillo Mínimo** | `8 studs` | 1 jugador con espacio de cámara libre |
-| **Pasillo de Combate** | `12 - 16 studs` | Combate fluido entre varios jugadores |
-| **Cobertura Baja** | Alto: `3.0 studs` | Permite disparar/mirar por encima agachado |
-| **Cobertura Alta** | Alto: `6.5 studs` | Cobertura total de cuerpo completo de pie |
+| **Avatar R15 (Hitbox)** | `4 x 5 x 2 studs` | Ancho, Alto, Profundidad del personaje |
+| **Salto Estándar** | `7.2 studs` de alto | Alcance vertical libre |
+| **Paso de Escalón (Max)** | `1.2 studs` de alto | Máximo que el avatar sube caminando sin saltar |
+| **Peldaño Ideal** | Alto: `0.8 st`, Huella: `2.0 st` | Subida fluida a velocidad normal |
+| **Vano de Puerta** | `5 x 8.5 studs` | Permite el paso holgado con sombreros y accesorios |
+| **Carril de Calle (1 carril)** | `12 - 16 studs` | Ancho estándar para circulación de vehículos |
+| **Avenida Principal** | `32 - 48 studs` | Dos carriles por sentido con mediana |
+| **Cobertura Baja** | `3.0 studs` | Permite asomarse o disparar agachado |
+| **Cobertura Alta** | `6.5 studs` | Cobertura total de cuerpo completo |
 
 ---
 
-## 3. Estructura del Proyecto
-
-```text
-roblox-graybox-mcp/
-├── package.json                 # Dependencias (@modelcontextprotocol/sdk, express, zod)
-├── opencode.json                # Configuración del MCP para OpenCode
-├── README.md                    # Documentación y guía completa
-├── src/
-│   ├── index.js                 # Servidor MCP y registro de Tools
-│   ├── bridge.js                # Servidor HTTP local (127.0.0.1:30250)
-│   └── generators/
-│       ├── palette.js           # Colores estándar Graybox y métricas en studs
-│       ├── room.js              # Generador de habitaciones con vanos de puertas
-│       ├── stairs.js            # Generador de escaleras transitables por el avatar
-│       ├── cover.js             # Coberturas tácticas (baja, alta, esquinas, columnas)
-│       └── arena.js             # Generador de arenas tácticas completas de 3 carriles
-└── roblox-plugin/
-    ├── GrayboxBridge.server.luau# Plugin de Roblox Studio con botón en la barra
-    └── README_PLUGIN.md         # Instrucciones específicas del plugin
-```
-
----
-
-## 4. Herramientas Disponibles en el MCP (Tools)
+## 4. Herramientas MCP Disponibles (Tools Reference)
 
 | Herramienta | Parámetros Principales | Descripción |
 | :--- | :--- | :--- |
-| `check_studio_connection` | Ninguno | Comprueba si Roblox Studio está abierto y si el plugin está enlazado. |
-| `create_room` | `name`, `x`, `y`, `z`, `width`, `length`, `height`, `doors`, `hasCeiling` | Crea una habitación con piso y 4 paredes. Soporta vanos de puertas transitables con dintel automático en paredes Norte, Sur, Este u Oeste. |
-| `create_stairs` | `startX`, `startY`, `startZ`, `width`, `totalHeight`, `direction` | Construye tramos de escaleras transitables (`+Z`, `-Z`, `+X`, `-X`). La altura por escalón se autocalibra a $\le 1.1\text{ studs}$. |
-| `place_cover` | `x`, `y`, `z`, `type`, `length`, `rotationY` | Coloca coberturas tácticas: `low` (3 studs, naranja), `high` (6.5 studs, azul), `l_shape` (esquinas) o `pillar` (columnas). |
-| `generate_arena` | `name`, `centerX`, `centerY`, `centerZ`, `sizeX`, `sizeZ` | Genera una arena simétrica completa de 3 carriles con perímetro, zonas de spawn para 2 equipos, plataforma central con rampas y líneas de visión cubiertas. |
-| `clear_graybox` | Ninguno | Elimina la carpeta `Workspace.Graybox` en Studio para reiniciar el mapa. |
-| `execute_raw_luau` | `code`, `actionName` | Permite a OpenCode generar Luau a medida para geometrías o mecánicas avanzadas. |
+| `check_studio_connection` | Ninguno | Comprueba si Roblox Studio y el plugin están conectados y activos. |
+| `get_workspace_layout` | `folder_path`, `max_depth` | **Feedback Loop:** Lee la jerarquía, bounding boxes, posiciones y tags de objetos existentes en Studio para evitar solapamientos. |
+| `build_structure` | `parts_list`, `default_parent`, `snap_grid`, `action_name` | **Batching Masivo:** Instancia decenas o cientos de objetos (Bloques, Cuñas, Truss, Cilindros) en una sola llamada con tags y jerarquías. |
+| `set_hollow_box` | `name`, `position`, `size`, `parent`, `doors`, `tags`, `attributes` | **Edificio Hueco:** Construye un edificio o habitación completa (suelo, techo y 4 paredes con vanos) para interiores de Bancos, Tiendas o Talleres. |
+| `spawn_wedge` | `name`, `position`, `size`, `rotation`, `parent`, `tags`, `attributes` | **Rampas / Cuñas:** Genera cuñas para rampas de autopistas, calles empinadas de montaña y tejados. |
+| `spawn_truss` | `name`, `position`, `height`, `parent`, `tags`, `attributes` | **Escaleras Técnicas:** Genera escaleras verticales escalables por el avatar para andamios y callejones. |
+| `add_tags_and_attributes` | `target_path`, `tags`, `attributes`, `recursive` | Asigna tags de CollectionService y atributos a partes o modelos existentes en Studio. |
+| `create_stairs` | `startX`, `startY`, `startZ`, `width`, `totalHeight`, `direction` | Construye escaleras calibradas para que el avatar las suba caminando ($\le 1.1\text{ studs}$ por escalón). |
+| `clear_folder` | `folder_path` | Elimina una carpeta o distrito específico (ej: `Graybox/Favela`) o todo `Graybox`. |
+| `execute_raw_luau` | `code`, `actionName` | Ejecuta cualquier Luau arbitrario con soporte completo de Undo/Redo (`Ctrl + Z`). |
 
 ---
 
-## 5. Código del Plugin de Roblox Studio
+## 5. Código del Plugin de Roblox Studio (`GrayboxBridge.server.luau`)
 
-Guarda este script en tu carpeta de plugins locales de Roblox Studio (`%LOCALAPPDATA%\Roblox\Plugins\GrayboxBridge.server.luau`):
+El script se encuentra en `roblox-plugin/GrayboxBridge.server.luau`. Cuenta con soporte bidireccional de lectura/escritura y registro en `ChangeHistoryService`:
 
 ```luau
 local HttpService = game:GetService("HttpService")
 local ChangeHistoryService = game:GetService("ChangeHistoryService")
+local CollectionService = game:GetService("CollectionService")
 
 local BRIDGE_URL = "http://127.0.0.1:30250"
 local POLL_INTERVAL = 0.35
 local isEnabled = true
 
--- Barra de herramientas de Studio
-local toolbar = plugin:CreateToolbar("Graybox MCP")
+local toolbar = plugin:CreateToolbar("Graybox City MCP")
 local toggleButton = toolbar:CreateButton(
     "ToggleBridge",
     "Activa o desactiva la conexión con el servidor MCP de OpenCode",
@@ -128,7 +130,52 @@ end)
 
 updateButtonState()
 
--- Hilo principal de polling y ejecución con soporte Undo/Redo
+local function resolvePath(pathStr)
+    if not pathStr or pathStr == "" or pathStr == "Workspace" or pathStr == "workspace" then
+        return workspace
+    end
+    local current = workspace
+    for _, part in ipairs(string.split(pathStr, "/")) do
+        if part ~= "" then
+            local nextObj = current:FindFirstChild(part)
+            if not nextObj then return nil end
+            current = nextObj
+        end
+    end
+    return current
+end
+
+local function inspectHierarchy(obj, currentDepth, maxDepth)
+    local info = {
+        name = obj.Name,
+        className = obj.ClassName,
+        tags = CollectionService:GetTags(obj),
+        attributes = obj:GetAttributes(),
+    }
+
+    if obj:IsA("Model") then
+        local cf, size = obj:GetBoundingBox()
+        info.position = { math.round(cf.Position.X * 10) / 10, math.round(cf.Position.Y * 10) / 10, math.round(cf.Position.Z * 10) / 10 }
+        info.size = { math.round(size.X * 10) / 10, math.round(size.Y * 10) / 10, math.round(size.Z * 10) / 10 }
+    elseif obj:IsA("BasePart") then
+        info.position = { math.round(obj.Position.X * 10) / 10, math.round(obj.Position.Y * 10) / 10, math.round(obj.Position.Z * 10) / 10 }
+        info.size = { math.round(obj.Size.X * 10) / 10, math.round(obj.Size.Y * 10) / 10, math.round(obj.Size.Z * 10) / 10 }
+        info.material = obj.Material.Name
+    end
+
+    if currentDepth < maxDepth and (obj:IsA("Folder") or obj:IsA("Model")) then
+        local children = {}
+        for _, child in ipairs(obj:GetChildren()) do
+            if child:IsA("Model") or child:IsA("Folder") or child:IsA("BasePart") then
+                table.insert(children, inspectHierarchy(child, currentDepth + 1, maxDepth))
+            end
+        end
+        info.children = children
+    end
+
+    return info
+end
+
 task.spawn(function()
     while true do
         if isEnabled then
@@ -145,42 +192,64 @@ task.spawn(function()
                     return HttpService:JSONDecode(response.Body)
                 end)
 
-                if okDecode and cmd and cmd.id and cmd.code then
-                    local actionName = cmd.actionName or "Graybox MCP Action"
-                    print("[Graybox MCP] 🔨 Ejecutando: " .. actionName)
+                if okDecode and cmd and cmd.id then
+                    -- 1. Feedback Loop (Lectura de Workspace)
+                    if cmd.type == "get_layout" then
+                        print("[Graybox MCP] 🔍 Leyendo layout de: " .. tostring(cmd.folder_path))
+                        local target = resolvePath(cmd.folder_path)
+                        local responseData = {}
 
-                    -- Registrar para Deshacer (Ctrl + Z)
-                    local recording = ChangeHistoryService:TryBeginRecording(actionName)
-
-                    local execOk, execErr = pcall(function()
-                        local fn, compileErr = loadstring(cmd.code)
-                        if not fn then error("Error Luau: " .. tostring(compileErr)) end
-                        fn()
-                    end)
-
-                    if recording then
-                        if execOk then
-                            ChangeHistoryService:FinishRecording(recording, Enum.FinishRecordingOperation.Commit)
-                            print("[Graybox MCP] ✅ Éxito: " .. actionName .. " (Ctrl+Z disponible)")
+                        if not target then
+                            responseData = { exists = false, message = "Ruta no encontrada." }
                         else
-                            ChangeHistoryService:FinishRecording(recording, Enum.FinishRecordingOperation.Cancel)
-                            warn("[Graybox MCP] ❌ Error en ejecución: " .. tostring(execErr))
+                            responseData = { exists = true, root = cmd.folder_path, layout = inspectHierarchy(target, 1, cmd.max_depth or 3) }
                         end
-                    end
 
-                    -- Responder al MCP
-                    pcall(function()
-                        HttpService:RequestAsync({
-                            Url = BRIDGE_URL .. "/response",
-                            Method = "POST",
-                            Headers = { ["Content-Type"] = "application/json" },
-                            Body = HttpService:JSONEncode({
-                                id = cmd.id,
-                                success = execOk,
-                                error = execErr and tostring(execErr) or nil,
-                            }),
-                        })
-                    end)
+                        pcall(function()
+                            HttpService:RequestAsync({
+                                Url = BRIDGE_URL .. "/response",
+                                Method = "POST",
+                                Headers = { ["Content-Type"] = "application/json" },
+                                Body = HttpService:JSONEncode({ id = cmd.id, success = true, data = responseData }),
+                            })
+                        end)
+
+                    -- 2. Construcción / Batching
+                    elseif cmd.code then
+                        local actionName = cmd.actionName or "Graybox MCP Action"
+                        print("[Graybox MCP] 🔨 Ejecutando: " .. actionName)
+
+                        local recording = ChangeHistoryService:TryBeginRecording(actionName)
+
+                        local execOk, execErr = pcall(function()
+                            local fn, compileErr = loadstring(cmd.code)
+                            if not fn then error("Error Luau: " .. tostring(compileErr)) end
+                            fn()
+                        end)
+
+                        if recording then
+                            if execOk then
+                                ChangeHistoryService:FinishRecording(recording, Enum.FinishRecordingOperation.Commit)
+                                print("[Graybox MCP] ✅ Éxito: " .. actionName .. " (Ctrl+Z disponible)")
+                            else
+                                ChangeHistoryService:FinishRecording(recording, Enum.FinishRecordingOperation.Cancel)
+                                warn("[Graybox MCP] ❌ Error en ejecución: " .. tostring(execErr))
+                            end
+                        end
+
+                        pcall(function()
+                            HttpService:RequestAsync({
+                                Url = BRIDGE_URL .. "/response",
+                                Method = "POST",
+                                Headers = { ["Content-Type"] = "application/json" },
+                                Body = HttpService:JSONEncode({
+                                    id = cmd.id,
+                                    success = execOk,
+                                    error = execErr and tostring(execErr) or nil,
+                                }),
+                            })
+                        end)
+                    end
                 end
             end
         end
@@ -192,25 +261,22 @@ end)
 
 ---
 
-## 6. Configuración de Roblox Studio (Paso a Paso)
+## 6. Configuración de Roblox Studio
 
-1. Abre **Roblox Studio** y carga un mapa base (ej. **Baseplate**).
-2. Ve a la pestaña **Home** > **Game Settings** > pestaña **Security**:
-   - Activa **Allow HTTP Requests** y haz clic en **Save** *(si el juego no está guardado, guárdalo primero para desbloquear la configuración)*.
+1. Abre tu proyecto en **Roblox Studio**.
+2. Ve a **Home** > **Game Settings** > pestaña **Security**:
+   - Activa **Allow HTTP Requests** y haz clic en **Save**.
 3. Instala el plugin:
    - Ve a la pestaña **Plugins** > haz clic en **Plugins Folder**.
-   - Se abrirá la carpeta de plugins en el Explorador de Windows (`%LOCALAPPDATA%\Roblox\Plugins`).
+   - Se abrirá la carpeta de plugins en Windows (`%LOCALAPPDATA%\Roblox\Plugins`).
    - Copia allí el archivo `roblox-plugin/GrayboxBridge.server.luau`.
-4. En la barra superior de Roblox Studio aparecerá el botón **Graybox MCP** en verde y la consola mostrará:
-   ```text
-   [Graybox MCP] 🟢 Bridge ACTIVO - Escuchando en http://127.0.0.1:30250
-   ```
+4. En la barra superior de Roblox Studio verás el botón **Graybox City MCP** en verde.
 
 ---
 
 ## 7. Configuración de OpenCode (`opencode.json`)
 
-El archivo `opencode.json` ya se encuentra en la raíz del proyecto configurado de la siguiente manera:
+El archivo `opencode.json` en la raíz del proyecto ya contiene la configuración necesaria:
 
 ```json
 {
@@ -228,38 +294,21 @@ El archivo `opencode.json` ya se encuentra en la raíz del proyecto configurado 
 }
 ```
 
-> **Tip:** También puedes copiar este bloque en tu archivo global `~/.config/opencode/opencode.json` para que esté disponible en cualquier carpeta.
-
 ---
 
-## 8. Flujo de Uso y Prompts de Prueba
+## 8. Ejemplos de Prompts para Diseño de Ciudades en OpenCode
 
-Abre tu terminal en la carpeta del proyecto y arranca OpenCode:
+### 1. Lectura Previa (Feedback Loop)
+> *"Usa get_workspace_layout para leer qué hay dentro de 'Graybox/Downtown'. Dime qué edificios ya existen y en qué coordenadas antes de construir nada nuevo."*
 
-```bash
-cd C:\Users\dtc59\Desktop\roblox-graybox-mcp
-opencode
-```
+### 2. Edificio Principal con Tag de Atraco (Heist)
+> *"Crea el Banco Central usando set_hollow_box en la posición (0, 0, 0) de tamaño 48x18x48 studs dentro de la carpeta 'City/Downtown/Bank'. Coloca una puerta principal en la pared Norte de 8x10 studs y etiquétala con el tag 'Heist_Target'."*
 
-Una vez dentro de OpenCode, puedes usar prompts como los siguientes:
+### 3. Rampa de Autopista Elevada
+> *"Genera una rampa de autopista con spawn_wedge de 24 studs de ancho, 16 studs de alto y 64 studs de largo que suba hacia la autopista elevada, guardada en 'City/Highways/Ramp_West' con el tag 'Road_Ramp'."*
 
-### Comprobar conexión
-> *"Comprueba si Roblox Studio está conectado al servidor MCP."*
+### 4. Sector de Favela en Lote Masivo (Batching)
+> *"Genera en un solo lote con build_structure 15 casas modulares apiladas en la ladera de la montaña dentro de 'City/Favela/Sector_B', usando bloques de concreto, techos de cuña (Wedge) y 4 escaleras técnicas (TrussPart) conectando los niveles de callejón. Asigna a la carpeta el atributo Territory: 'Vagos'."*
 
-### Arena completa de combate
-> *"Genera una arena táctica de combate de 80x80 studs centrada en (0, 0, 0)."*
-
-### Habitación con puertas transitables
-> *"Crea una habitación graybox de 40x30 studs llamada 'ControlRoom' en (0, 0, 0) con paredes de 14 studs de alto y una puerta en la pared Norte."*
-
-### Escaleras transitables
-> *"Desde la puerta Norte, crea una escalera de 6 studs de ancho que suba 10 studs de altura en dirección +Z hacia una plataforma."*
-
-### Coberturas tácticas
-> *"Coloca 4 coberturas bajas dispuestas en cruz en el centro de la sala y dos columnas altas a los costados."*
-
-### Limpieza o reinicio
-> *"Limpia el graybox actual y vuelve a generar la arena con paredes de 18 studs de alto."*
-
-### Deshacer cambios
-> Si algún diseño generado no te convence, presiona **`Ctrl + Z`** directamente en **Roblox Studio** para deshacer la última acción de la IA de inmediato.
+### 5. Deshacer cualquier error
+> Presiona **`Ctrl + Z`** directamente en **Roblox Studio** para revertir cualquier generación completa al instante.

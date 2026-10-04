@@ -1,7 +1,8 @@
 import express from "express";
 
 const app = express();
-app.use(express.json({ limit: "10mb" }));
+// Límite de 50mb para soportar lotes grandes de geometría JSON
+app.use(express.json({ limit: "50mb" }));
 
 const BRIDGE_PORT = 30250;
 const BRIDGE_HOST = "127.0.0.1";
@@ -10,7 +11,7 @@ let pendingCommands = [];
 const commandResolvers = new Map();
 let lastStudioHeartbeat = 0;
 
-// Polling endpoint consultado por el plugin de Roblox Studio
+// Polling endpoint consultado continuamente por el plugin de Roblox Studio
 app.get("/poll", (req, res) => {
   lastStudioHeartbeat = Date.now();
   if (pendingCommands.length > 0) {
@@ -21,17 +22,17 @@ app.get("/poll", (req, res) => {
   }
 });
 
-// Endpoint de confirmación y reporte de ejecución desde el plugin
+// Endpoint de confirmación y reporte de ejecución o lectura desde el plugin
 app.post("/response", (req, res) => {
   lastStudioHeartbeat = Date.now();
-  const { id, success, error, stats } = req.body;
+  const { id, success, error, stats, data } = req.body;
   if (commandResolvers.has(id)) {
     const { resolve, reject, timer } = commandResolvers.get(id);
     clearTimeout(timer);
     commandResolvers.delete(id);
 
     if (success) {
-      resolve({ success: true, stats: stats || {} });
+      resolve({ success: true, stats: stats || {}, data: data || null });
     } else {
       reject(new Error(error || "Error de ejecución Luau en Roblox Studio."));
     }
@@ -55,7 +56,6 @@ let serverInstance = null;
 export function startBridge() {
   if (serverInstance) return;
   serverInstance = app.listen(BRIDGE_PORT, BRIDGE_HOST, () => {
-    // Los logs deben ser a stderr para no interferir con el transporte stdio de MCP
     console.error(`[Bridge] Servidor HTTP local activo en http://${BRIDGE_HOST}:${BRIDGE_PORT}`);
   });
 }
@@ -73,7 +73,14 @@ export function getStudioStatusInfo() {
   };
 }
 
-export function sendToRoblox(luauCode, actionName = "Graybox Action", timeoutMs = 15000) {
+/**
+ * Envía una carga de trabajo a Roblox Studio y espera su confirmación o respuesta con datos.
+ * @param {string} luauCode - Código Luau a ejecutar
+ * @param {string} actionName - Nombre de la acción para ChangeHistoryService
+ * @param {object} extraPayload - Datos adicionales (ej. queries para get_workspace_layout)
+ * @param {number} timeoutMs - Tiempo límite de espera
+ */
+export function sendToRoblox(luauCode, actionName = "Graybox Action", extraPayload = {}, timeoutMs = 25000) {
   return new Promise((resolve, reject) => {
     const id = "cmd_" + Date.now() + "_" + Math.random().toString(36).substring(2, 7);
 
@@ -84,8 +91,8 @@ export function sendToRoblox(luauCode, actionName = "Graybox Action", timeoutMs 
         reject(
           new Error(
             "Timeout: Roblox Studio no está conectado al bridge.\n" +
-            "1. Asegúrate de tener Roblox Studio abierto con un lugar cargado.\n" +
-            "2. Verifica que el plugin 'GrayboxBridge' esté activo.\n" +
+            "1. Asegúrate de tener Roblox Studio abierto con un mapa cargado.\n" +
+            "2. Verifica que el botón 'Graybox MCP' esté activo en la pestaña Plugins.\n" +
             "3. Revisa en 'Game Settings > Security' que 'Allow HTTP Requests' esté activado."
           )
         );
@@ -95,6 +102,6 @@ export function sendToRoblox(luauCode, actionName = "Graybox Action", timeoutMs 
     }, timeoutMs);
 
     commandResolvers.set(id, { resolve, reject, timer });
-    pendingCommands.push({ id, code: luauCode, actionName });
+    pendingCommands.push({ id, code: luauCode, actionName, ...extraPayload });
   });
 }
