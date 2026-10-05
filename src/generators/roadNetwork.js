@@ -268,10 +268,24 @@ local function buildCulDeSac()
     bulbCyl.Material = Enum.Material.Concrete
     bulbCyl.Color = colAsphalt
 
-    -- 2. ACERA Y BORDILLO PERIMETRAL EN ARCO (Cubre ~280° dejando abierta la boca de entrada)
-    local numArcSegs = 20
-    local startAngle = 45
-    local endAngle = 315
+    -- 2. ACERA Y BORDILLO PERIMETRAL EN ARCO (Cubre ~270° dejando abierta la boca de entrada según la dirección)
+    local numArcSegs = 24
+    local startAngle = 135
+    local endAngle = 405
+
+    if dir == "West" then
+        startAngle = 225
+        endAngle = 495
+    elseif dir == "East" then
+        startAngle = 45
+        endAngle = 315
+    elseif dir == "North" then
+        startAngle = 315
+        endAngle = 585
+    else -- South
+        startAngle = 135
+        endAngle = 405
+    end
 
     for a = 0, numArcSegs do
         local theta = math.rad(startAngle + (a / numArcSegs) * (endAngle - startAngle))
@@ -291,7 +305,7 @@ local function buildCulDeSac()
         makePart("Bulb_Sidewalk_" .. a, Vector3.new(sW, curbH, segLen), swCF, colSidewalk, Enum.Material.Concrete)
 
         -- Farolas en el arco
-        if a == 5 or a == 15 then
+        if a == 6 or a == 18 then
             local polePos = Vector3.new(cx + cosT * (swDist + 2), cy + curbH, cz + sinT * (swDist + 2))
             local pole = makePart("CulDeSac_Lamp", Vector3.new(0.8, 14, 0.8), CFrame.new(polePos) * CFrame.new(0, 7, 0), Color3.fromRGB(45, 48, 55), Enum.Material.Metal)
             local bulb = makePart("Lamp_Bulb", Vector3.new(1.2, 0.4, 1.2), CFrame.new(polePos) * CFrame.new(0, 13.8, 0), Color3.fromRGB(255, 235, 180), Enum.Material.Neon, false)
@@ -302,24 +316,30 @@ local function buildCulDeSac()
         end
     end
 
-    -- 3. CALLE RECTA DE APROXIMACIÓN
-    -- Si approachDirection == "South", la calle viene desde +Z hacia el bulbo en cz
-    local appPosZ = cz + bulbR + appLen / 2 - 4
-    makePart("Approach_Street", Vector3.new(rW, 1.2, appLen), CFrame.new(cx, cy - 0.6, appPosZ), colAsphalt, Enum.Material.Concrete)
-
-    -- Aceras de la calle recta
-    local swLX = cx - rW / 2 - curbW - sW / 2
-    local swRX = cx + rW / 2 + curbW + sW / 2
-    makePart("Approach_Sw_L", Vector3.new(sW, curbH, appLen), CFrame.new(swLX, cy + curbH / 2, appPosZ), colSidewalk, Enum.Material.Concrete)
-    makePart("Approach_Sw_R", Vector3.new(sW, curbH, appLen), CFrame.new(swRX, cy + curbH / 2, appPosZ), colSidewalk, Enum.Material.Concrete)
-
-    -- Bordillos
-    makePart("Approach_Curb_L", Vector3.new(curbW, curbH + 0.1, appLen), CFrame.new(cx - rW / 2 - curbW / 2, cy + curbH / 2, appPosZ), colCurb, Enum.Material.Granite)
-    makePart("Approach_Curb_R", Vector3.new(curbW, curbH + 0.1, appLen), CFrame.new(cx + rW / 2 + curbW / 2, cy + curbH / 2, appPosZ), colCurb, Enum.Material.Granite)
-
-    -- Doble línea central amarilla
-    makePart("Approach_Stripe_L", Vector3.new(0.4, 0.08, appLen - 6), CFrame.new(cx - 0.6, cy + 0.04, appPosZ), colStripeYellow, Enum.Material.SmoothPlastic, false)
-    makePart("Approach_Stripe_R", Vector3.new(0.4, 0.08, appLen - 6), CFrame.new(cx + 0.6, cy + 0.04, appPosZ), colStripeYellow, Enum.Material.SmoothPlastic, false)
+    -- 3. CALLE RECTA DE APROXIMACIÓN (Orientada según la dirección)
+    if dir == "West" or dir == "East" then
+        local appPosX = (dir == "West") and (cx - bulbR - appLen / 2 + 4) or (cx + bulbR + appLen / 2 - 4)
+        makePart("Approach_Street", Vector3.new(appLen, 1.2, rW), CFrame.new(appPosX, cy - 0.6, cz), colAsphalt, Enum.Material.Concrete)
+        local swNZ = cz - rW / 2 - curbW - sW / 2
+        local swSZ = cz + rW / 2 + curbW + sW / 2
+        makePart("Approach_Sw_N", Vector3.new(appLen, curbH, sW), CFrame.new(appPosX, cy + curbH / 2, swNZ), colSidewalk, Enum.Material.Concrete)
+        makePart("Approach_Sw_S", Vector3.new(appLen, curbH, sW), CFrame.new(appPosX, cy + curbH / 2, swSZ), colSidewalk, Enum.Material.Concrete)
+        makePart("Approach_Curb_N", Vector3.new(appLen, curbH + 0.1, curbW), CFrame.new(appPosX, cy + curbH / 2, cz - rW / 2 - curbW / 2), colCurb, Enum.Material.Granite)
+        makePart("Approach_Curb_S", Vector3.new(appLen, curbH + 0.1, curbW), CFrame.new(appPosX, cy + curbH / 2, cz + rW / 2 + curbW / 2), colCurb, Enum.Material.Granite)
+        makePart("Approach_Stripe_N", Vector3.new(appLen - 6, 0.08, 0.4), CFrame.new(appPosX, cy + 0.04, cz - 0.6), colStripeYellow, Enum.Material.SmoothPlastic, false)
+        makePart("Approach_Stripe_S", Vector3.new(appLen - 6, 0.08, 0.4), CFrame.new(appPosX, cy + 0.04, cz + 0.6), colStripeYellow, Enum.Material.SmoothPlastic, false)
+    else
+        local appPosZ = (dir == "North") and (cz - bulbR - appLen / 2 + 4) or (cz + bulbR + appLen / 2 - 4)
+        makePart("Approach_Street", Vector3.new(rW, 1.2, appLen), CFrame.new(cx, cy - 0.6, appPosZ), colAsphalt, Enum.Material.Concrete)
+        local swLX = cx - rW / 2 - curbW - sW / 2
+        local swRX = cx + rW / 2 + curbW + sW / 2
+        makePart("Approach_Sw_L", Vector3.new(sW, curbH, appLen), CFrame.new(swLX, cy + curbH / 2, appPosZ), colSidewalk, Enum.Material.Concrete)
+        makePart("Approach_Sw_R", Vector3.new(sW, curbH, appLen), CFrame.new(swRX, cy + curbH / 2, appPosZ), colSidewalk, Enum.Material.Concrete)
+        makePart("Approach_Curb_L", Vector3.new(curbW, curbH + 0.1, appLen), CFrame.new(cx - rW / 2 - curbW / 2, cy + curbH / 2, appPosZ), colCurb, Enum.Material.Granite)
+        makePart("Approach_Curb_R", Vector3.new(curbW, curbH + 0.1, appLen), CFrame.new(cx + rW / 2 + curbW / 2, cy + curbH / 2, appPosZ), colCurb, Enum.Material.Granite)
+        makePart("Approach_Stripe_L", Vector3.new(0.4, 0.08, appLen - 6), CFrame.new(cx - 0.6, cy + 0.04, appPosZ), colStripeYellow, Enum.Material.SmoothPlastic, false)
+        makePart("Approach_Stripe_R", Vector3.new(0.4, 0.08, appLen - 6), CFrame.new(cx + 0.6, cy + 0.04, appPosZ), colStripeYellow, Enum.Material.SmoothPlastic, false)
+    end
 
     print("[RoadNetwork] ✅ Cul-de-sac '${name}' (Grove St style) construido en (${cx}, ${cy}, ${cz}).")
 end

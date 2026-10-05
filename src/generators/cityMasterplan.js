@@ -279,8 +279,11 @@ ${oceanCode}
   roadLuauList.push(trafficLight2);
 
   // 3D. Trazado Orgánico / Curvas Bézier, Cuestas y Cul-de-Sacs
-  const culDeSacX = cx - halfW * 0.45;
-  const culDeSacZ = northStreetZ - 75;
+  const resStreetZ = northStreetZ - 130;
+  const numHouseCols = Math.min(5, Math.floor((halfW - 80) / 54));
+  const connectorX = cx - halfW + 60 + numHouseCols * 52 + 25;
+  const culDeSacX = connectorX + 85;
+  const culDeSacZ = resStreetZ;
 
   if (roadPattern === "organic_coastal" || isSchedule1 || isGtaSa) {
     // 1. Bulevar Curvo Costero Panorámico
@@ -306,10 +309,10 @@ ${oceanCode}
     const hillClimbRoad = generateCurvedRoadLuau({
       name: "Hillside_Scenic_Climb",
       waypoints: [
-        [cx - halfW + 60, cy, northStreetZ - 50],
-        [cx - halfW + 110, cy + 10, northStreetZ - 130],
-        [cx - halfW + 70, cy + 18, northStreetZ - 190],
-        [cx - halfW + 150, cy + 24, northStreetZ - 230],
+        [cx - halfW + 60, cy, resStreetZ - 70],
+        [cx - halfW + 110, cy + 10, resStreetZ - 130],
+        [cx - halfW + 70, cy + 18, resStreetZ - 180],
+        [cx - halfW + 150, cy + 24, resStreetZ - 210],
       ],
       roadWidth: URBAN_METRICS.ROADS.STREET_2LANE.totalWidth,
       sidewalkWidth: URBAN_METRICS.SIDEWALKS.STANDARD,
@@ -327,14 +330,44 @@ ${oceanCode}
     const culDeSacLuau = generateCulDeSacLuau({
       name: "Barrio_Grove_CulDeSac",
       center: [culDeSacX, cy, culDeSacZ],
-      approachDirection: "South",
-      approachLength: 80,
+      approachDirection: "West",
+      approachLength: 40,
       roadWidth: URBAN_METRICS.ROADS.STREET_2LANE.totalWidth,
       radius: URBAN_METRICS.ROADS.CUL_DE_SAC_BULB_RADIUS,
       sidewalkWidth: URBAN_METRICS.SIDEWALKS.STANDARD,
       parent: `${cityRootFolder}/Roads`,
     });
     roadLuauList.push(culDeSacLuau);
+
+    // 4. Calle Residencial Suburbana (calle central arbolada con aceras continuas)
+    const streetResidentialGrove = generateStreetLuau({
+      name: "Street_Grove_Suburban_EW",
+      startPosition: [cx - halfW + 40, cy, resStreetZ],
+      endPosition: [culDeSacX - 38, cy, resStreetZ],
+      roadWidth: URBAN_METRICS.ROADS.STREET_2LANE.totalWidth,
+      sidewalkWidth: URBAN_METRICS.SIDEWALKS.STANDARD,
+      hasLanes: true,
+      hasSidewalks: true,
+      hasLamps: true,
+      lampInterval: 44,
+      parent: `${cityRootFolder}/Roads`,
+    });
+    roadLuauList.push(streetResidentialGrove);
+
+    // 5. Calle Conectora Norte-Sur del Barrio (une la avenida principal con la calle residencial)
+    const streetConnectorNS = generateStreetLuau({
+      name: "Street_Barrio_Connector_NS",
+      startPosition: [connectorX, cy, northStreetZ - 16],
+      endPosition: [connectorX, cy, resStreetZ + 16],
+      roadWidth: URBAN_METRICS.ROADS.STREET_2LANE.totalWidth,
+      sidewalkWidth: URBAN_METRICS.SIDEWALKS.STANDARD,
+      hasLanes: true,
+      hasSidewalks: true,
+      hasLamps: true,
+      lampInterval: 40,
+      parent: `${cityRootFolder}/Roads`,
+    });
+    roadLuauList.push(streetConnectorNS);
   }
 
   phases.push({ name: "Fase 3: Trazado de Red Vial, Curvas Bézier y Semáforos", luauCode: roadLuauList.join("\n") });
@@ -426,54 +459,59 @@ ${oceanCode}
   const residentialLuauList = [];
 
   // Cuadrante Residencial (Noroeste o Norte)
-  const resBaseZ = northStreetZ - 80;
-  const numHouseCols = Math.min(5, Math.floor((halfW - 80) / 54));
-
-  // Fila 1 de Casas (Mirando al Sur hacia Avenue_North_EW)
+  // Fila 1 de Casas: Lado Sur de Street_Grove_Suburban_EW (Mirando al Norte hacia la calle con acera directa)
+  // Acera Sur de la calle está en resStreetZ + 20. El frente de la parcela toca exactamente resStreetZ + 20.
+  const row1FrontZ = resStreetZ + 20;
+  const row1CenterZ = row1FrontZ + 36; // Parcela de 72 studs de profundidad
   for (let c = 0; c < numHouseCols; c++) {
     const hX = cx - halfW + 60 + c * 52;
-    const hZ = northStreetZ - 50;
     const house1 = generateHouseLuau({
-      name: `Suburban_House_N_Row1_${c + 1}`,
-      position: [hX, cy, hZ],
+      name: `Suburban_House_S_Row1_${c + 1}`,
+      position: [hX, cy, row1CenterZ],
       lotSize: [50, 72],
       style: (c % 2 === 0) ? "suburban_bungalow" : "duplex_apartment",
-      rotationY: 0, // Fachada mira al Sur
+      rotationY: 180, // Fachada mira al Norte hacia Street_Grove_Suburban_EW
       seed: effectiveSeed + c * 73,
       hasGarage: true,
       hasPorch: true,
       hasFence: true,
       hasYardProps: true,
+      hasSidewalk: false, // Conecta directamente a la acera Sur de Street_Grove_Suburban_EW
+      hasStreetHalf: false,
       parent: `${cityRootFolder}/Zoning_Residential`,
     });
     residentialLuauList.push(house1);
   }
 
-  // Fila 2 de Casas (Mirando al Norte hacia calle posterior, espalda con espalda)
+  // Fila 2 de Casas: Lado Norte de Street_Grove_Suburban_EW (Mirando al Sur hacia la calle con acera directa)
+  // Acera Norte de la calle está en resStreetZ - 20. El frente de la parcela toca exactamente resStreetZ - 20.
+  const row2FrontZ = resStreetZ - 20;
+  const row2CenterZ = row2FrontZ - 36; // Parcela de 72 studs de profundidad
   for (let c = 0; c < numHouseCols; c++) {
     const hX = cx - halfW + 60 + c * 52;
-    const hZ = northStreetZ - 130;
     const house2 = generateHouseLuau({
       name: `Suburban_House_N_Row2_${c + 1}`,
-      position: [hX, cy, hZ],
+      position: [hX, cy, row2CenterZ],
       lotSize: [50, 72],
       style: (c % 3 === 0) ? "victorian_rowhouse" : "suburban_bungalow",
-      rotationY: 180, // Fachada mira al Norte
+      rotationY: 0, // Fachada mira al Sur hacia Street_Grove_Suburban_EW
       seed: effectiveSeed + c * 109 + 500,
       hasGarage: c % 2 === 0,
       hasPorch: true,
       hasFence: true,
       hasYardProps: true,
+      hasSidewalk: false, // Conecta a la acera Norte de Street_Grove_Suburban_EW
+      hasStreetHalf: false,
       parent: `${cityRootFolder}/Zoning_Residential`,
     });
     residentialLuauList.push(house2);
   }
 
-  // Parque de Bolsillo / Zona Verde del Barrio
+  // Parque de Bolsillo / Zona Verde del Barrio (Ubicado junto al conector sin solapar chalets)
   const parkLuau = generatePocketParkLuau({
     name: "Neighborhood_Pocket_Park",
-    position: [cx - halfW + 60 + numHouseCols * 52 + 20, cy, northStreetZ - 90],
-    size: [60, 80],
+    position: [connectorX, cy, resStreetZ + 65],
+    size: [60, 60],
     theme: "suburban_playground",
     hasFountain: false,
     hasBenches: true,
@@ -485,8 +523,10 @@ ${oceanCode}
 
   // 6C. Casas Radiales del Cul-de-Sac y Villa en la Cima de la Cuesta
   if (roadPattern === "organic_coastal" || isSchedule1 || isGtaSa) {
-    const culDeSacRadius = URBAN_METRICS.ROADS.CUL_DE_SAC_LOT_RADIUS; // 74 studs
-    const culAngles = [80, 130, 180, 230, 280];
+    // Radio exacto: bulbo (38) + bordillo (0.8) + acera (8) + mitad de parcela (32) = 78.8 studs
+    const culDeSacRadius = 78.8;
+    // 5 chalets dispuestos en arco de 270° alrededor del bulbo (dejando libre la entrada Oeste)
+    const culAngles = [250, 295, 360, 65, 110];
     for (let i = 0; i < culAngles.length; i++) {
       const angDeg = culAngles[i];
       const angRad = (angDeg * Math.PI) / 180;
@@ -505,6 +545,8 @@ ${oceanCode}
         hasPorch: true,
         hasFence: true,
         hasYardProps: true,
+        hasSidewalk: false, // Conecta directamente a la acera circular del CulDeSac
+        hasStreetHalf: false,
         parent: `${cityRootFolder}/Zoning_Residential`,
       });
       residentialLuauList.push(culHouse);
@@ -513,7 +555,7 @@ ${oceanCode}
     // Mansión en la colina panorámica (remate de Hillside_Scenic_Climb a cota +24)
     const hillVilla = generateHouseLuau({
       name: "Hilltop_Vinewood_Villa",
-      position: [cx - halfW + 150, cy + 24, northStreetZ - 270],
+      position: [cx - halfW + 150, cy + 24, resStreetZ - 210],
       lotSize: [64, 80],
       style: "vinewood_mansion",
       rotationY: 0, // Fachada mirando al Sur hacia el skyline de la ciudad
@@ -522,6 +564,8 @@ ${oceanCode}
       hasPorch: false,
       hasFence: true,
       hasYardProps: true,
+      hasSidewalk: true,
+      hasStreetHalf: true,
       parent: `${cityRootFolder}/Zoning_Residential`,
     });
     residentialLuauList.push(hillVilla);

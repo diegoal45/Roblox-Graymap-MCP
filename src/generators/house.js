@@ -112,6 +112,8 @@ export function generateHouseLuau({
   hasPorch = true,
   hasFence = true,
   hasYardProps = true,
+  hasSidewalk = true,
+  hasStreetHalf = true,
   parent = "City/Houses",
 }) {
   const [posX, posY, posZ] = [snapVal(position[0], 4), snapVal(position[1], 4), snapVal(position[2], 4)];
@@ -226,15 +228,47 @@ local function buildRealisticHouse()
         return p
     end
 
-    -- 1. PARCELA RESIDENCIAL: CÉSPED, CALZADA DE VEHÍCULOS (DRIVEWAY) Y CIMENTACIÓN
-    makePart("Lot_Grass_Lawn", Vector3.new(lotW, 1.2, lotD), CFrame.new(0, 0.6, 0), colGrass, Enum.Material.Grass, true)
+    -- 1. PARCELA RESIDENCIAL: CÉSPED, ACERA, BORDILLO, CALLE Y DRIVEWAY
+    local hasSw = ${hasSidewalk ? "true" : "false"}
+    local hasStHalf = ${hasStreetHalf ? "true" : "false"}
+
+    local swD = 8.0
+    local curbD = 0.8
+    local curbH = 0.75
+
+    -- Césped de la parcela (cota a Y = 0.65, recortado en el frente para dejar paso limpio a la acera sin solapamientos)
+    local lawnD = lotD - (hasSw and swD or 0)
+    local lawnZ = - (hasSw and swD or 0) / 2
+    makePart("Lot_Grass_Lawn", Vector3.new(lotW, 0.65, lawnD), CFrame.new(0, 0.65 / 2, lawnZ), colGrass, Enum.Material.Grass, true)
+
+    if hasSw then
+        local swZ = lotD / 2 - swD / 2
+        local curbZ = lotD / 2 + curbD / 2
+        makePart("Front_Sidewalk", Vector3.new(lotW, 0.65, swD), CFrame.new(0, 0.65 / 2, swZ), Color3.fromRGB(180, 185, 192), Enum.Material.Concrete, true)
+        makePart("Front_Curb", Vector3.new(lotW, curbH, curbD), CFrame.new(0, curbH / 2, curbZ), Color3.fromRGB(135, 140, 145), Enum.Material.Granite, true)
+    end
+
+    if hasStHalf then
+        local stD = 14.0
+        local stZ = lotD / 2 + curbD + stD / 2
+        makePart("Front_Street_Asphalt", Vector3.new(lotW, 1.2, stD), CFrame.new(0, 0.3 - 0.6, stZ), Color3.fromRGB(36, 38, 42), Enum.Material.Concrete, true)
+        -- Doble línea amarilla divisoria continua
+        makePart("Front_Street_Stripe", Vector3.new(lotW, 0.08, 0.6), CFrame.new(0, 0.34, lotD / 2 + curbD + stD - 0.3), Color3.fromRGB(240, 200, 45), Enum.Material.SmoothPlastic, false, true)
+    end
 
     -- Camino de entrada de vehículos de hormigón (Driveway) en el lateral derecho (+X, +Z)
     local driveW = 12
     local driveLen = lotD * 0.62
     local driveX = lotW / 2 - driveW / 2 - 2
-    local driveZ = lotD / 2 - driveLen / 2
-    makePart("Driveway_Concrete", Vector3.new(driveW, 1.25, driveLen), CFrame.new(driveX, 0.65, driveZ), colDriveway, Enum.Material.Concrete, true)
+    local driveZ = (lotD / 2) - driveLen / 2
+    makePart("Driveway_Concrete", Vector3.new(driveW, 0.68, driveLen), CFrame.new(driveX, 0.68 / 2, driveZ), colDriveway, Enum.Material.Concrete, true)
+
+    if hasSw and hasStHalf then
+        -- Rampa de transición desde el bordillo hasta el asfalto (Curb Cut Apron)
+        local apronD = curbD + 1.4
+        local apronZ = lotD / 2 + apronD / 2
+        makePart("Driveway_Apron", Vector3.new(driveW + 0.8, 0.38, apronD), CFrame.new(driveX, 0.44, apronZ), colDriveway, Enum.Material.Concrete, true)
+    end
 
     -- Cimentación elevada de la vivienda
     local fH = 1.6

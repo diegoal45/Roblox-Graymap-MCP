@@ -1010,6 +1010,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             has_porch: { type: "boolean", default: true, description: "Porche delantero cubierto con escalones y farol" },
             has_fence: { type: "boolean", default: true, description: "Valla perimetral de madera blanca o delimitación" },
             has_yard_props: { type: "boolean", default: true, description: "Buzón americano a pie de calle, camino de losas, barbacoa y cubos de basura" },
+            has_sidewalk: { type: "boolean", default: true, description: "Genera la acera frontal de hormigón y bordillo de granito frente a la casa" },
+            has_street_half: { type: "boolean", default: true, description: "Genera la mitad de la calzada de asfalto con línea divisoria y rampa de acceso desde el garaje" },
             rotation_y: { type: "number", default: 0, description: "Rotación en el eje Y en grados (0, 90, 180, 270) para encarar la calle deseada" },
             parent: { type: "string", default: "City/Houses" },
           },
@@ -1952,7 +1954,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
   try {
     if (name === "check_studio_connection") {
-      const status = getStudioStatusInfo();
+      const status = await getStudioStatusInfo();
       if (status.connected) {
         return {
           content: [
@@ -2588,6 +2590,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         hasPorch: args.has_porch ?? true,
         hasFence: args.has_fence ?? true,
         hasYardProps: args.has_yard_props ?? true,
+        hasSidewalk: args.has_sidewalk ?? true,
+        hasStreetHalf: args.has_street_half ?? true,
         rotationY: args.rotation_y ?? 0,
         parent: args.parent || "City/Houses",
       });
