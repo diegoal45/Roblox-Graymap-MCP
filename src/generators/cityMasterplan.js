@@ -17,6 +17,7 @@ import { generateStreetFurnitureLuau } from "./streetFurniture.js";
 import { generateTrafficSignageLuau } from "./trafficSignage.js";
 import { generateParkingLotLuau } from "./parkingLot.js";
 import { generatePocketParkLuau, generateCaliforniaPalmLuau } from "./palmsAndParks.js";
+import { generateCurvedRoadLuau, generateCulDeSacLuau } from "./roadNetwork.js";
 import { generateAdjustLightingLuau } from "./levelDesignTools.js";
 
 /**
@@ -37,6 +38,7 @@ import { generateAdjustLightingLuau } from "./levelDesignTools.js";
 export function generateCityMasterplanPhases({
   name = "City_Masterplan",
   theme = "schedule_1_coastal", // "schedule_1_coastal", "gta_san_andreas", "modern_metropolis", "favela_sprawl"
+  roadPattern = "organic_coastal", // "organic_coastal", "grid", "hillside_switchback"
   center = [0, 0, 0],
   size = [1200, 1200], // [widthX, lengthZ]
   seed = 7777,
@@ -276,7 +278,66 @@ ${oceanCode}
   roadLuauList.push(trafficLight1);
   roadLuauList.push(trafficLight2);
 
-  phases.push({ name: "Fase 3: Trazado de Red Vial y Semáforos", luauCode: roadLuauList.join("\n") });
+  // 3D. Trazado Orgánico / Curvas Bézier, Cuestas y Cul-de-Sacs
+  const culDeSacX = cx - halfW * 0.45;
+  const culDeSacZ = northStreetZ - 75;
+
+  if (roadPattern === "organic_coastal" || isSchedule1 || isGtaSa) {
+    // 1. Bulevar Curvo Costero Panorámico
+    const coastalCurvedRoad = generateCurvedRoadLuau({
+      name: "Scenic_Coastal_Boulevard",
+      waypoints: [
+        [cx - halfW + 40, cy, cz + halfL - 250],
+        [cx - halfW * 0.15, cy, cz + halfL - 200],
+        [cx + halfW * 0.35, cy, cz + halfL - 225],
+        [cx + halfW - 50, cy, cz + halfL - 270],
+      ],
+      roadWidth: URBAN_METRICS.ROADS.STREET_WITH_PARKING.totalWidth,
+      sidewalkWidth: URBAN_METRICS.SIDEWALKS.COMMERCIAL,
+      hasSidewalks: true,
+      hasLamps: true,
+      hasRetainingWall: false,
+      segments: 36,
+      parent: `${cityRootFolder}/Roads`,
+    });
+    roadLuauList.push(coastalCurvedRoad);
+
+    // 2. Cuesta en Pendiente con Muros de Contención y Quitamiedos (sube a colina residencial)
+    const hillClimbRoad = generateCurvedRoadLuau({
+      name: "Hillside_Scenic_Climb",
+      waypoints: [
+        [cx - halfW + 60, cy, northStreetZ - 50],
+        [cx - halfW + 110, cy + 10, northStreetZ - 130],
+        [cx - halfW + 70, cy + 18, northStreetZ - 190],
+        [cx - halfW + 150, cy + 24, northStreetZ - 230],
+      ],
+      roadWidth: URBAN_METRICS.ROADS.STREET_2LANE.totalWidth,
+      sidewalkWidth: URBAN_METRICS.SIDEWALKS.STANDARD,
+      hasSidewalks: true,
+      hasLamps: true,
+      hasGuardrails: true,
+      hasRetainingWall: true,
+      baseElevation: cy - 2,
+      segments: 32,
+      parent: `${cityRootFolder}/Roads`,
+    });
+    roadLuauList.push(hillClimbRoad);
+
+    // 3. Cul-de-Sac Circular estilo Grove Street (retorno con bulbo de 38 studs)
+    const culDeSacLuau = generateCulDeSacLuau({
+      name: "Barrio_Grove_CulDeSac",
+      center: [culDeSacX, cy, culDeSacZ],
+      approachDirection: "South",
+      approachLength: 80,
+      roadWidth: URBAN_METRICS.ROADS.STREET_2LANE.totalWidth,
+      radius: URBAN_METRICS.ROADS.CUL_DE_SAC_BULB_RADIUS,
+      sidewalkWidth: URBAN_METRICS.SIDEWALKS.STANDARD,
+      parent: `${cityRootFolder}/Roads`,
+    });
+    roadLuauList.push(culDeSacLuau);
+  }
+
+  phases.push({ name: "Fase 3: Trazado de Red Vial, Curvas Bézier y Semáforos", luauCode: roadLuauList.join("\n") });
 
   // ---------------------------------------------------------------------------
   // FASE 4: AUTOPISTA ELEVADA (HIGHWAY) SI CORRESPONDE
@@ -422,7 +483,51 @@ ${oceanCode}
   });
   residentialLuauList.push(parkLuau);
 
-  phases.push({ name: "Fase 6: Barrio Residencial Suburbano y Parque Comunitario", luauCode: residentialLuauList.join("\n") });
+  // 6C. Casas Radiales del Cul-de-Sac y Villa en la Cima de la Cuesta
+  if (roadPattern === "organic_coastal" || isSchedule1 || isGtaSa) {
+    const culDeSacRadius = URBAN_METRICS.ROADS.CUL_DE_SAC_LOT_RADIUS; // 74 studs
+    const culAngles = [80, 130, 180, 230, 280];
+    for (let i = 0; i < culAngles.length; i++) {
+      const angDeg = culAngles[i];
+      const angRad = (angDeg * Math.PI) / 180;
+      const hX = culDeSacX + Math.cos(angRad) * culDeSacRadius;
+      const hZ = culDeSacZ + Math.sin(angRad) * culDeSacRadius;
+      const houseFacing = (angDeg + 180) % 360; // Orientada al centro del retorno
+
+      const culHouse = generateHouseLuau({
+        name: `CulDeSac_Grove_House_${i + 1}`,
+        position: [hX, cy, hZ],
+        lotSize: [48, 64],
+        style: i === 2 ? "victorian_rowhouse" : "suburban_bungalow",
+        rotationY: houseFacing,
+        seed: effectiveSeed + i * 89 + 777,
+        hasGarage: true,
+        hasPorch: true,
+        hasFence: true,
+        hasYardProps: true,
+        parent: `${cityRootFolder}/Zoning_Residential`,
+      });
+      residentialLuauList.push(culHouse);
+    }
+
+    // Mansión en la colina panorámica (remate de Hillside_Scenic_Climb a cota +24)
+    const hillVilla = generateHouseLuau({
+      name: "Hilltop_Vinewood_Villa",
+      position: [cx - halfW + 150, cy + 24, northStreetZ - 270],
+      lotSize: [64, 80],
+      style: "vinewood_mansion",
+      rotationY: 0, // Fachada mirando al Sur hacia el skyline de la ciudad
+      seed: effectiveSeed + 999,
+      hasGarage: true,
+      hasPorch: false,
+      hasFence: true,
+      hasYardProps: true,
+      parent: `${cityRootFolder}/Zoning_Residential`,
+    });
+    residentialLuauList.push(hillVilla);
+  }
+
+  phases.push({ name: "Fase 6: Barrio Residencial Suburbano, Cul-de-Sac y Villa en Colina", luauCode: residentialLuauList.join("\n") });
 
   // ---------------------------------------------------------------------------
   // FASE 7: DOWNTOWN / TORRES CORPORATIVAS O VILLA DE COLINAS

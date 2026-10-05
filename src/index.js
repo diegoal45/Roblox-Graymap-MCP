@@ -760,6 +760,12 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
               default: "schedule_1_coastal",
               description: "Temática y estilo arquitectónico/urbanístico general del mapa",
             },
+            road_pattern: {
+              type: "string",
+              enum: ["organic_coastal", "grid", "hillside_switchback"],
+              default: "organic_coastal",
+              description: "Patrón del trazado viario ('organic_coastal' = bulevares curvos Bézier, cuesta con muros de contención y cul-de-sac tipo Grove St; 'grid' = cuadrícula ortogonal; 'hillside_switchback' = carreteras sinuosas de montaña)",
+            },
             center: {
               type: "array",
               items: { type: "number" },
@@ -2462,6 +2468,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const phases = generateCityMasterplanPhases({
         name: args.name || "City_Masterplan",
         theme: args.theme || "schedule_1_coastal",
+        roadPattern: args.road_pattern || "organic_coastal",
         center: args.center || [0, 0, 0],
         size: args.size || [1200, 1200],
         seed: args.seed ?? 7777,

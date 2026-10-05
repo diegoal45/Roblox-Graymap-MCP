@@ -9,6 +9,7 @@ function parseArgs() {
     theme: "schedule_1_coastal",
     size: [1200, 1200],
     name: "City_Procedural_Masterplan",
+    roadPattern: "organic_coastal",
     seed: 7777,
     density: "high",
   };
@@ -16,6 +17,8 @@ function parseArgs() {
   for (const arg of args) {
     if (arg.startsWith("--theme=")) {
       options.theme = arg.split("=")[1];
+    } else if (arg.startsWith("--pattern=") || arg.startsWith("--roadPattern=")) {
+      options.roadPattern = arg.split("=")[1];
     } else if (arg.startsWith("--size=")) {
       const sVal = arg.split("=")[1];
       if (sVal.includes("x")) {

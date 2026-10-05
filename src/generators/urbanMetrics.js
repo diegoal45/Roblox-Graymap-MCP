@@ -62,6 +62,9 @@ export const URBAN_METRICS = {
     },
     CANAL_WIDTH_STANDARD: 56,    // Ancho estándar del canal pluvial tipo LA River
     CANAL_DEPTH_STANDARD: 16,    // Profundidad de excavación bajo cota de calle (Y = -16)
+    CUL_DE_SAC_BULB_RADIUS: 38,  // Radio exterior de la rotonda de retorno estilo Grove St
+    CUL_DE_SAC_LOT_RADIUS: 74,   // Distancia radial desde el centro del retorno a las casas
+    HILL_SLOPE_MAX_CLIMB: 50,    // Desnivel vertical máximo sugerido para laderas residenciales
   },
 
   // 3. ACERAS Y ESPACIO PEATONAL
