@@ -90,7 +90,7 @@ export function startBridge() {
 }
 
 export async function isStudioConnected() {
-  if (!isBridgeServer && !serverInstance) {
+  if (!isBridgeServer) {
     try {
       const resp = await fetch(`http://${BRIDGE_HOST}:${BRIDGE_PORT}/status`);
       if (resp.ok) {
@@ -105,7 +105,7 @@ export async function isStudioConnected() {
 }
 
 export async function getStudioStatusInfo() {
-  if (!isBridgeServer && !serverInstance) {
+  if (!isBridgeServer) {
     try {
       const resp = await fetch(`http://${BRIDGE_HOST}:${BRIDGE_PORT}/status`);
       if (resp.ok) {
@@ -133,7 +133,7 @@ export async function getStudioStatusInfo() {
  * @param {number} timeoutMs - Tiempo límite de espera
  */
 export async function sendToRoblox(luauCode, actionName = "Graybox Action", extraPayload = {}, timeoutMs = 45000) {
-  if (!isBridgeServer && !serverInstance) {
+  if (!isBridgeServer) {
     try {
       const resp = await fetch(`http://${BRIDGE_HOST}:${BRIDGE_PORT}/execute`, {
         method: "POST",

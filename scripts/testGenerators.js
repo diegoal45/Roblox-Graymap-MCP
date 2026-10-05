@@ -22,7 +22,9 @@ import { generateDocksLuau } from "../src/generators/docks.js";
 import { generateMotelLuau } from "../src/generators/motel.js";
 import { generateStorageFacilityLuau } from "../src/generators/storageFacility.js";
 import { generateStormCanalLuau } from "../src/generators/stormCanal.js";
+import { generateBridgeLuau } from "../src/generators/bridge.js";
 import { generateShadyBusinessLuau } from "../src/generators/shadyBusiness.js";
+import { generateCityMasterplanLuau, generateCityMasterplanPhases } from "../src/generators/cityMasterplan.js";
 
 const tests = [
   {
@@ -99,6 +101,10 @@ const tests = [
     fn: () => generateStormCanalLuau({ position: [0, 0, 0], length: 160, width: 56, depth: 16 }),
   },
   {
+    name: "Canal Vehicular Bridge",
+    fn: () => generateBridgeLuau({ startPoint: [0, 0, -30], endPoint: [0, 0, 30], roadWidth: 36 }),
+  },
+  {
     name: "Shady Business (Pawn Shop)",
     fn: () => generateShadyBusinessLuau({ position: [0, 0, 0], businessType: "pawn", includeDeadDrop: true }),
   },
@@ -154,6 +160,22 @@ const tests = [
   {
     name: "Adjust Lighting",
     fn: () => generateAdjustLightingLuau({ clockTime: 17.5, brightness: 2, outdoorAmbient: [140, 120, 110] }),
+  },
+  // Macro City Masterplan & Urban Metrics
+  {
+    name: "City Masterplan (Schedule 1 Coastal - Phases)",
+    fn: () => {
+      const phases = generateCityMasterplanPhases({ theme: "schedule_1_coastal", size: [1200, 1200] });
+      return phases.map((p) => p.luauCode).join("\n");
+    },
+  },
+  {
+    name: "City Masterplan (GTA San Andreas - Full Luau)",
+    fn: () => generateCityMasterplanLuau({ theme: "gta_san_andreas", size: [1600, 1600] }),
+  },
+  {
+    name: "City Masterplan (Modern Metropolis - Full Luau)",
+    fn: () => generateCityMasterplanLuau({ theme: "modern_metropolis", size: [1400, 1400] }),
   },
 ];
 
